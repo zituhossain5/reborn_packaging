@@ -1,0 +1,57 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
+import 'package:reborn_packaging/features/products/state/product_selection_controller.dart';
+
+void main() {
+  group('ProductSelectionController', () {
+    test('starts with the selected variant and base totals', () {
+      final controller = ProductSelectionController(mockKraftRoundBowlsProduct);
+
+      expect(controller.selectedVariant.size, '500ml');
+      expect(controller.selectedVariant.lid, 'Without Lid');
+      expect(controller.selectedVariant.price, 54.95);
+      expect(controller.selectedVariant.piecesPerPack, 600);
+      expect(controller.unitPrice, closeTo(54.95 / 600, 0.000001));
+      expect(controller.quantity, 1);
+      expect(controller.totalUnits, 600);
+      expect(controller.totalPrice, 54.95);
+    });
+
+    test('resolves size and lid combinations with dynamic values', () {
+      final controller = ProductSelectionController(mockKraftRoundBowlsProduct);
+
+      expect(controller.isLidAvailable('With PET Lid'), isFalse);
+
+      controller.selectLid('With PP Lid');
+      expect(controller.selectedVariant.price, 59.95);
+
+      controller.selectSize('650ml');
+      expect(controller.selectedVariant.lid, 'With PP Lid');
+      expect(controller.selectedVariant.price, 65.95);
+      expect(controller.selectedVariant.piecesPerPack, 500);
+
+      controller.selectLid('With PET Lid');
+      expect(controller.selectedVariant.price, 63.95);
+
+      controller.selectSize('500ml');
+      expect(controller.selectedVariant.lid, 'Without Lid');
+      expect(controller.selectedVariant.price, 54.95);
+      expect(controller.isLidAvailable('With PET Lid'), isFalse);
+    });
+
+    test('calculates quantity, units, and total price', () {
+      final controller = ProductSelectionController(mockKraftRoundBowlsProduct);
+
+      controller.increaseQuantity();
+      expect(controller.quantity, 2);
+      expect(controller.totalUnits, 1200);
+      expect(controller.totalPrice, closeTo(109.90, 0.000001));
+
+      controller.decreaseQuantity();
+      controller.decreaseQuantity();
+      expect(controller.quantity, 1);
+      expect(controller.canDecrease, isFalse);
+      expect(controller.totalPrice, 54.95);
+    });
+  });
+}

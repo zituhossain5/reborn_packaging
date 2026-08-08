@@ -13,6 +13,7 @@ abstract final class AppTheme {
         brightness: Brightness.light,
         surface: AppColors.white,
       ),
+      fontFamily: AppTypography.fontFamily,
       textTheme: AppTypography.textTheme,
     );
   }
