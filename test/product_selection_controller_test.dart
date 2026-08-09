@@ -11,10 +11,31 @@ void main() {
       expect(controller.selectedVariant.lid, 'Without Lid');
       expect(controller.selectedVariant.price, 54.95);
       expect(controller.selectedVariant.piecesPerPack, 600);
+      expect(controller.includeVat, isFalse);
       expect(controller.unitPrice, closeTo(54.95 / 600, 0.000001));
+      expect(controller.displayedVariantPrice, 54.95);
+      expect(controller.displayedUnitPrice, closeTo(54.95 / 600, 0.000001));
       expect(controller.quantity, 1);
       expect(controller.totalUnits, 600);
       expect(controller.totalPrice, 54.95);
+    });
+
+    test('applies VAT only to displayed prices and totals', () {
+      final controller = ProductSelectionController(mockKraftRoundBowlsProduct);
+
+      controller.toggleIncludeVat();
+
+      expect(controller.includeVat, isTrue);
+      expect(controller.selectedVariant.priceExVat, 54.95);
+      expect(controller.displayedVariantPrice, closeTo(65.94, 0.000001));
+      expect(controller.displayedUnitPrice, closeTo(65.94 / 600, 0.000001));
+      expect(controller.totalPrice, closeTo(65.94, 0.000001));
+
+      controller.increaseQuantity();
+
+      expect(controller.quantity, 2);
+      expect(controller.totalUnits, 1200);
+      expect(controller.totalPrice, closeTo(131.88, 0.000001));
     });
 
     test('resolves size and lid combinations with dynamic values', () {

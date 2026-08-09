@@ -1,20 +1,35 @@
+import '../../../core/config/pricing_config.dart';
 import '../models/product_details.dart';
 import '../models/product_variant_resolver.dart';
 
 class ProductSelectionController {
   ProductSelectionController(this.product)
     : _selectedVariant = product.selectedVariant,
+      _includeVat = false,
       _quantity = product.quantityRule.minimum;
 
   final ProductDetails product;
 
   ProductVariant _selectedVariant;
+  bool _includeVat;
   int _quantity;
 
   ProductVariant get selectedVariant => _selectedVariant;
+  bool get includeVat => _includeVat;
   int get quantity => _quantity;
   double get unitPrice => _selectedVariant.unitPrice;
-  double get totalPrice => _selectedVariant.price * _quantity;
+  double get displayedVariantPrice {
+    return PricingConfig.priceForVatState(
+      exVatPrice: _selectedVariant.priceExVat,
+      includeVat: _includeVat,
+    );
+  }
+
+  double get displayedUnitPrice {
+    return displayedVariantPrice / _selectedVariant.piecesPerPack;
+  }
+
+  double get totalPrice => displayedVariantPrice * _quantity;
   int get totalUnits => _selectedVariant.piecesPerPack * _quantity;
   bool get canDecrease => _quantity > product.quantityRule.minimum;
 
@@ -65,6 +80,10 @@ class ProductSelectionController {
     if (variant != null) {
       _selectedVariant = variant;
     }
+  }
+
+  void toggleIncludeVat() {
+    _includeVat = !_includeVat;
   }
 
   void increaseQuantity() {

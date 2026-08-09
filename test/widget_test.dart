@@ -79,8 +79,15 @@ void main() {
     expect(find.text('Kraft Round Bowls'), findsOneWidget);
     expect(find.text('In Stock'), findsOneWidget);
     expect(find.text('\u00A354.95'), findsNWidgets(2));
+    expect(find.text('Ex. VAT'), findsOneWidget);
     expect(find.text('600 units'), findsOneWidget);
     expect(find.text('ADD TO CART'), findsOneWidget);
+
+    await tester.tap(find.text('Include VAT'));
+    await tester.pump();
+    expect(find.text('Inc. VAT'), findsOneWidget);
+    expect(find.text('\u00A365.94'), findsNWidgets(2));
+    expect(find.text('\u00A30.1099 / piece'), findsOneWidget);
 
     var petLidChip = tester.widget<ProductOptionChip>(
       find.widgetWithText(ProductOptionChip, 'With PET Lid'),
@@ -103,15 +110,15 @@ void main() {
     );
     expect(petLidChip.selected, isTrue);
     expect(find.text('500 QTY'), findsOneWidget);
-    expect(find.text('\u00A30.1279 / piece'), findsOneWidget);
-    expect(find.text('\u00A363.95'), findsNWidgets(2));
+    expect(find.text('\u00A30.1535 / piece'), findsOneWidget);
+    expect(find.text('\u00A376.74'), findsNWidgets(2));
     expect(find.text('500 units'), findsOneWidget);
 
     await tester.ensureVisible(find.bySemanticsLabel('Increase quantity'));
     await tester.tap(find.bySemanticsLabel('Increase quantity'));
     await tester.pump();
     expect(find.text('1000 units'), findsOneWidget);
-    expect(find.text('\u00A3127.90'), findsOneWidget);
+    expect(find.text('\u00A3153.48'), findsOneWidget);
 
     final ctaTop = tester.getTopLeft(find.text('ADD TO CART')).dy;
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));

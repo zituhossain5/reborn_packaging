@@ -85,6 +85,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                               _ProductInformation(
                                 product: product,
                                 variant: _selectedVariant,
+                                displayPrice: _selection.displayedVariantPrice,
+                                displayUnitPrice: _selection.displayedUnitPrice,
+                                includeVat: _selection.includeVat,
+                                onToggleIncludeVat: _toggleIncludeVat,
                               ),
                               const SizedBox(height: 20),
                               const _SectionDivider(),
@@ -105,6 +109,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             ],
                           ),
                         ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: ProductBottomBar.scrollPadding(context),
                       ),
                     ),
                   ],
@@ -183,13 +192,28 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   void _decreaseQuantity() {
     setState(_selection.decreaseQuantity);
   }
+
+  void _toggleIncludeVat() {
+    setState(_selection.toggleIncludeVat);
+  }
 }
 
 class _ProductInformation extends StatelessWidget {
-  const _ProductInformation({required this.product, required this.variant});
+  const _ProductInformation({
+    required this.product,
+    required this.variant,
+    required this.displayPrice,
+    required this.displayUnitPrice,
+    required this.includeVat,
+    required this.onToggleIncludeVat,
+  });
 
   final ProductDetails product;
   final ProductVariant variant;
+  final double displayPrice;
+  final double displayUnitPrice;
+  final bool includeVat;
+  final VoidCallback onToggleIncludeVat;
 
   @override
   Widget build(BuildContext context) {
@@ -222,14 +246,14 @@ class _ProductInformation extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '\u00A3${variant.price.toStringAsFixed(2)}',
+              '\u00A3${displayPrice.toStringAsFixed(2)}',
               maxLines: 1,
               style: AppTypography.productDetailsPrice,
             ),
             const SizedBox(width: AppSpacing.xs),
             Flexible(
               child: Text(
-                '\u00A3${variant.unitPrice.toStringAsFixed(4)} / piece',
+                '\u00A3${displayUnitPrice.toStringAsFixed(4)} / piece',
                 maxLines: 1,
                 overflow: TextOverflow.clip,
                 style: AppTypography.productDetailsMeta,
@@ -245,8 +269,8 @@ class _ProductInformation extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            const Text(
-              'Ex. VAT',
+            Text(
+              includeVat ? 'Inc. VAT' : 'Ex. VAT',
               maxLines: 1,
               style: AppTypography.productDetailsLightMeta,
             ),
@@ -255,15 +279,16 @@ class _ProductInformation extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Semantics(
           button: true,
+          checked: includeVat,
           label: 'Include VAT',
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () {},
-            child: const Row(
+            onTap: onToggleIncludeVat,
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DecoratedBox(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     border: Border.fromBorderSide(
                       BorderSide(color: AppColors.checkboxBorder),
                     ),
@@ -271,10 +296,22 @@ class _ProductInformation extends StatelessWidget {
                       Radius.circular(AppSpacing.xxs),
                     ),
                   ),
-                  child: SizedBox.square(dimension: 16),
+                  child: SizedBox.square(
+                    dimension: 16,
+                    child: includeVat
+                        ? const Icon(
+                            Icons.check,
+                            size: 13,
+                            color: AppColors.primary,
+                          )
+                        : null,
+                  ),
                 ),
-                SizedBox(width: AppSpacing.xs),
-                Text('Include VAT', style: AppTypography.productDetailsMeta),
+                const SizedBox(width: AppSpacing.xs),
+                const Text(
+                  'Include VAT',
+                  style: AppTypography.productDetailsMeta,
+                ),
               ],
             ),
           ),

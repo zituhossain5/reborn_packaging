@@ -55,6 +55,7 @@ class ProductVariant {
   final int quantityAvailable;
   final String? imageAsset;
 
+  double get priceExVat => price;
   double get unitPrice => price / piecesPerPack;
   bool get isAvailable => availableForSale && quantityAvailable > 0;
 }
