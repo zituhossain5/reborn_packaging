@@ -803,4 +803,253 @@ abstract final class AppTypography {
     height: 1.3,
     leadingDistribution: TextLeadingDistribution.even,
   );
+
+  static const accountAvatar = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.14,
+  );
+
+  static const accountName = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.18,
+  );
+
+  static const accountEmail = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.12,
+  );
+
+  static const accountTabActive = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.14,
+  );
+
+  static const accountTabInactive = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.14,
+  );
+
+  static const accountEmptyTitle = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountEmptyBody = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountShopButton = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountOrdersHeading = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.18,
+  );
+
+  static const accountOrderValue = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.28,
+  );
+
+  static const accountOrderMeta = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.24,
+  );
+
+  static const accountOrderStatus = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.12,
+  );
+
+  static const accountSectionLabel = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.72,
+  );
+
+  static const accountProfileCaption = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountProfileValue = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountAddressName = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const accountAddressBody = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.26,
+  );
+
+  static const accountProfileAction = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.13,
+  );
+
+  static const accountSignOut = TextStyle(
+    color: AppColors.accountDanger,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountSheetTitle = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountSheetLabel = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountSheetSplitLabel = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.26,
+  );
+
+  static const accountSheetInput = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const accountSheetHint = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const accountSheetButton = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const accountSheetPrimaryButton = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
 }

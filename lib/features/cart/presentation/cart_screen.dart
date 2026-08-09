@@ -732,7 +732,7 @@ class _CartBottomArea extends StatelessWidget {
               ),
             ),
           ),
-        const ShopBottomNavigation(activeItem: ShopNavigationItem.cart),
+        const ShopBottomNavigation(),
       ],
     );
   }

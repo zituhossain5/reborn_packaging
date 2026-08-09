@@ -28,4 +28,8 @@ abstract final class AppColors {
   static const shopPay = Color(0xFF612CFE);
   static const payPal = Color(0xFFFFC200);
   static const orderSuccessBackground = Color(0x1A07AB5F);
+  static const accountStatusPendingBackground = Color(0x1AF79009);
+  static const accountStatusDeliveredBackground = Color(0x1A006038);
+  static const accountDanger = Color(0xFFC93328);
+  static const accountToggleOff = Color(0xFFCFD1D4);
 }

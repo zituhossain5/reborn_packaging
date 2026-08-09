@@ -153,12 +153,7 @@ class _AddToCartButtonState extends State<_AddToCartButton> {
             child: SizedBox.square(
               dimension: ProductCard._bagIconSize,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  1.125,
-                  1.125,
-                  1.125,
-                  2.8125,
-                ),
+                padding: const EdgeInsets.fromLTRB(1.125, 1.125, 1.125, 2.8125),
                 child: SvgPicture.asset(
                   'assets/icons/add_to_cart_bag.svg',
                   colorFilter: const ColorFilter.mode(

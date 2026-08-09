@@ -49,9 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.white,
       resizeToAvoidBottomInset: true,
-      bottomNavigationBar: const ShopBottomNavigation(
-        activeItem: ShopNavigationItem.account,
-      ),
+      bottomNavigationBar: const ShopBottomNavigation(),
       body: SafeArea(
         bottom: false,
         child: LayoutBuilder(
@@ -114,14 +112,14 @@ class _LoginContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 343,
+      width: double.infinity,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(
             child: Image.asset(
-              'assets/images/reborn_logo.png',
+              'assets/images/branding/reborn_symbol.png',
               width: 80,
               height: 80,
               fit: BoxFit.contain,

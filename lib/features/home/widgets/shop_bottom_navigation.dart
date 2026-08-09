@@ -13,22 +13,16 @@ import '../../auth/state/mock_auth_controller.dart';
 enum ShopNavigationItem { shop, cart, account }
 
 class ShopBottomNavigation extends ConsumerWidget {
-  const ShopBottomNavigation({
-    this.activeItem = ShopNavigationItem.shop,
-    super.key,
-  });
+  const ShopBottomNavigation({super.key});
 
-  static const _contentHeight = 54.0;
+  static const _contentHeight = 55.0;
   static const _iconSize = 24.0;
-
-  final ShopNavigationItem activeItem;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final effectiveBottomInset = bottomInset > 6 ? bottomInset - 6 : 0.0;
     final cartQuantity = ref.watch(cartTotalQuantityProvider);
     final isMockAuthenticated = ref.watch(mockAuthControllerProvider);
+    final activeItem = _activeItemForPath(GoRouterState.of(context).uri.path);
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -41,74 +35,91 @@ class ShopBottomNavigation extends ConsumerWidget {
           ),
         ],
       ),
-      child: SizedBox(
-        height: _contentHeight + effectiveBottomInset,
-        child: Padding(
-          padding: const EdgeInsets.only(
-            left: AppSpacing.md,
-            top: AppSpacing.sm,
-            right: AppSpacing.md,
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final availableItemWidth = constraints.maxWidth / 3;
-              final itemWidth = availableItemWidth < 110
-                  ? availableItemWidth
-                  : 110.0;
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: _contentHeight,
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: AppSpacing.md,
+              top: AppSpacing.sm,
+              right: AppSpacing.md,
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final availableItemWidth = constraints.maxWidth / 3;
+                final itemWidth = availableItemWidth < 110
+                    ? availableItemWidth
+                    : 110.0;
 
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: itemWidth,
-                    child: _NavigationItem(
-                      label: 'SHOP',
-                      assetPath: 'assets/icons/shop.svg',
-                      selected: activeItem == ShopNavigationItem.shop,
-                      iconPadding: const EdgeInsets.all(3.75),
-                      onTap: () => context.go('/home'),
-                    ),
-                  ),
-                  SizedBox(
-                    width: itemWidth,
-                    child: _NavigationItem(
-                      label: 'CART',
-                      assetPath:
-                          activeItem == ShopNavigationItem.cart &&
-                              cartQuantity > 0
-                          ? 'assets/icons/cart_bag_filled.svg'
-                          : 'assets/icons/cart.svg',
-                      selected: activeItem == ShopNavigationItem.cart,
-                      iconPadding: const EdgeInsets.fromLTRB(
-                        1.685,
-                        1.687,
-                        1.685,
-                        3.938,
-                      ),
-                      badgeCount: cartQuantity,
-                      onTap: () => context.go('/cart'),
-                    ),
-                  ),
-                  SizedBox(
-                    width: itemWidth,
-                    child: _NavigationItem(
-                      label: 'ACCOUNT',
-                      assetPath: 'assets/icons/account.svg',
-                      selected: activeItem == ShopNavigationItem.account,
-                      iconPadding: const EdgeInsets.all(2.438),
-                      onTap: () => context.go(
-                        isMockAuthenticated ? '/account' : '/login',
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: itemWidth,
+                      child: _NavigationItem(
+                        label: 'SHOP',
+                        assetPath: activeItem == ShopNavigationItem.shop
+                            ? 'assets/icons/shop.svg'
+                            : 'assets/icons/shop_outline.svg',
+                        selected: activeItem == ShopNavigationItem.shop,
+                        iconPadding: const EdgeInsets.all(3.75),
+                        onTap: () => context.go('/home'),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                    SizedBox(
+                      width: itemWidth,
+                      child: _NavigationItem(
+                        label: 'CART',
+                        assetPath: activeItem == ShopNavigationItem.cart
+                            ? 'assets/icons/cart_bag_filled.svg'
+                            : 'assets/icons/cart.svg',
+                        selected: activeItem == ShopNavigationItem.cart,
+                        iconPadding: const EdgeInsets.fromLTRB(
+                          1.685,
+                          1.687,
+                          1.685,
+                          3.938,
+                        ),
+                        badgeCount: cartQuantity,
+                        onTap: () => context.go('/cart'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: itemWidth,
+                      child: _NavigationItem(
+                        label: 'ACCOUNT',
+                        assetPath: activeItem == ShopNavigationItem.account
+                            ? 'assets/icons/account_filled.svg'
+                            : 'assets/icons/account.svg',
+                        selected: activeItem == ShopNavigationItem.account,
+                        iconPadding: activeItem == ShopNavigationItem.account
+                            ? const EdgeInsets.all(2.25)
+                            : const EdgeInsets.all(2.438),
+                        onTap: () => context.go(
+                          isMockAuthenticated ? '/account' : '/login',
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
     );
+  }
+
+  ShopNavigationItem _activeItemForPath(String path) {
+    if (path == '/login' || path.startsWith('/account')) {
+      return ShopNavigationItem.account;
+    }
+    if (path.startsWith('/cart')) {
+      return ShopNavigationItem.cart;
+    }
+    return ShopNavigationItem.shop;
   }
 }
 
