@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -8,10 +9,12 @@ import '../../../app/theme/app_typography.dart';
 import '../../home/widgets/delivery_banner.dart';
 import '../../home/widgets/home_header.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
+import '../actions/product_cart_actions.dart';
 import '../data/mock_products.dart';
+import '../models/product_item.dart';
 import '../widgets/product_card.dart';
 
-class CollectionProductsScreen extends StatelessWidget {
+class CollectionProductsScreen extends ConsumerWidget {
   const CollectionProductsScreen({
     required this.collectionTitle,
     required this.collectionHandle,
@@ -22,7 +25,7 @@ class CollectionProductsScreen extends StatelessWidget {
   final String collectionHandle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final products = mockProductsForCollection(collectionHandle);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -35,14 +38,17 @@ class CollectionProductsScreen extends StatelessWidget {
       ),
       child: Scaffold(
         backgroundColor: AppColors.white,
-        bottomNavigationBar: const ShopBottomNavigation(cartBadgeCount: 2),
+        bottomNavigationBar: const ShopBottomNavigation(),
         body: ColoredBox(
           color: AppColors.white,
           child: SafeArea(
             bottom: false,
             child: Column(
               children: [
-                HomeHeader(onBack: context.pop),
+                HomeHeader(
+                  onBack: context.pop,
+                  onSearch: () => context.push('/search'),
+                ),
                 const DeliveryBanner(),
                 Expanded(
                   child: ColoredBox(
@@ -82,6 +88,11 @@ class CollectionProductsScreen extends StatelessWidget {
                                 onTap: () => context.push(
                                   '/products/${products[index].handle}',
                                 ),
+                                onAddToCart: () => _addToCartOrOpenDetails(
+                                  context: context,
+                                  ref: ref,
+                                  product: products[index],
+                                ),
                               ),
                               childCount: products.length,
                             ),
@@ -104,5 +115,20 @@ class CollectionProductsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _addToCartOrOpenDetails({
+    required BuildContext context,
+    required WidgetRef ref,
+    required ProductItem product,
+  }) {
+    final added = addProductItemDefaultVariantToCart(
+      ref: ref,
+      product: product,
+    );
+
+    if (!added) {
+      context.push('/products/${product.handle}');
+    }
   }
 }

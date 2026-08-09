@@ -319,4 +319,488 @@ abstract final class AppTypography {
     leadingDistribution: TextLeadingDistribution.even,
     letterSpacing: 0.54,
   );
+
+  static const cartHeaderTitle = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w400,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.18,
+  );
+
+  static const cartHeaderCount = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const cartItemTitle = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const cartPackQuantity = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.44,
+  );
+
+  static const cartShippingMessage = TextStyle(
+    color: AppColors.shippingAccent,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.2,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const cartShippingCaption = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.44,
+  );
+
+  static const cartNote = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const cartSummaryHeading = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.84,
+  );
+
+  static const cartSummaryLabel = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.26,
+  );
+
+  static const cartSummaryValue = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.26,
+  );
+
+  static const cartTotalLabel = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const cartTotalValue = TextStyle(
+    color: AppColors.primary,
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.36,
+  );
+
+  static const cartDiscountInput = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const cartApplyButton = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.66,
+  );
+
+  static const cartCheckoutButton = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const searchInput = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w300,
+    height: 1.4,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const searchPlaceholder = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w300,
+    height: 1.4,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const searchNoResults = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const checkoutStepNumber = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.12,
+  );
+
+  static const checkoutStepActive = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.66,
+  );
+
+  static const checkoutStepInactive = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.66,
+  );
+
+  static const checkoutSummaryLabel = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const checkoutSummaryTotal = TextStyle(
+    color: AppColors.primary,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const checkoutExpressLabel = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.72,
+  );
+
+  static const checkoutSectionTitle = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const checkoutInputLabel = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const checkoutInput = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const checkoutHint = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const checkoutCheckbox = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const checkoutProduct = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const checkoutSummaryRow = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const paymentSecurity = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const paymentMethod = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const paymentMore = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const paymentDescription = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.26,
+  );
+
+  static const orderPlacedTitle = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const orderConfirmation = TextStyle(
+    color: AppColors.orderDescriptionText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const orderSummaryLabel = TextStyle(
+    color: AppColors.orderSummaryLabelText,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.26,
+  );
+
+  static const orderSummaryValue = TextStyle(
+    color: AppColors.orderSummaryValueText,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.26,
+  );
+
+  static const orderSummaryEmphasis = TextStyle(
+    color: AppColors.orderSummaryEmphasisText,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.26,
+  );
+
+  static const orderActionPrimary = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const orderActionSecondary = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const loginTitle = TextStyle(
+    color: AppColors.black,
+    fontFamily: fontFamily,
+    fontSize: 24,
+    fontWeight: FontWeight.w600,
+    height: 1.1,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.24,
+  );
+
+  static const loginSubtitle = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.26,
+  );
+
+  static const loginShopButton = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.15,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const loginDivider = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0.72,
+  );
+
+  static const loginInputLabel = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const loginInput = TextStyle(
+    color: AppColors.primaryText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const loginInputHint = TextStyle(
+    color: AppColors.lightText,
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: -0.28,
+  );
+
+  static const loginCheckbox = TextStyle(
+    color: AppColors.secondaryText,
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static const loginButton = TextStyle(
+    color: AppColors.white,
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
 }

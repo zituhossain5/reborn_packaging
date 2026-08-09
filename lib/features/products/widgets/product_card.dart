@@ -104,43 +104,80 @@ class ProductCard extends StatelessWidget {
         Positioned(
           right: 0,
           top: 60,
-          child: Semantics(
-            button: true,
+          child: _AddToCartButton(
             label: 'Add ${product.title} to cart',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onAddToCart ?? () {},
-              child: Container(
-                width: _buttonSize,
-                height: _buttonSize,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
+            onTap: onAddToCart ?? () {},
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddToCartButton extends StatefulWidget {
+  const _AddToCartButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_AddToCartButton> createState() => _AddToCartButtonState();
+}
+
+class _AddToCartButtonState extends State<_AddToCartButton> {
+  var _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: widget.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: (_) => _setPressed(true),
+        onTapUp: (_) => _setPressed(false),
+        onTapCancel: () => _setPressed(false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.94 : 1,
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOut,
+          child: Container(
+            width: ProductCard._buttonSize,
+            height: ProductCard._buttonSize,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+            ),
+            child: SizedBox.square(
+              dimension: ProductCard._bagIconSize,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  1.125,
+                  1.125,
+                  1.125,
+                  2.8125,
                 ),
-                child: SizedBox.square(
-                  dimension: _bagIconSize,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      1.125,
-                      1.125,
-                      1.125,
-                      2.8125,
-                    ),
-                    child: SvgPicture.asset(
-                      'assets/icons/add_to_cart_bag.svg',
-                      colorFilter: const ColorFilter.mode(
-                        AppColors.white,
-                        BlendMode.srcIn,
-                      ),
-                    ),
+                child: SvgPicture.asset(
+                  'assets/icons/add_to_cart_bag.svg',
+                  colorFilter: const ColorFilter.mode(
+                    AppColors.white,
+                    BlendMode.srcIn,
                   ),
                 ),
               ),
             ),
           ),
         ),
-      ],
+      ),
     );
+  }
+
+  void _setPressed(bool pressed) {
+    if (_pressed == pressed) {
+      return;
+    }
+    setState(() => _pressed = pressed);
   }
 }

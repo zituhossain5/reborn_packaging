@@ -70,7 +70,7 @@ void main() {
     expect(find.text('500ml Kraft Round Bowls'), findsNWidgets(4));
     expect(find.text('600 QTY'), findsNWidgets(4));
     expect(find.text('\u00A341.95'), findsNWidgets(4));
-    expect(find.text('2'), findsOneWidget);
+    expect(find.byKey(const ValueKey('cart_quantity_badge')), findsNothing);
     expect(find.bySemanticsLabel('Back'), findsOneWidget);
 
     await tester.tap(find.text('500ml Kraft Round Bowls').first);
@@ -82,6 +82,24 @@ void main() {
     expect(find.text('Ex. VAT'), findsOneWidget);
     expect(find.text('600 units'), findsOneWidget);
     expect(find.text('ADD TO CART'), findsOneWidget);
+    expect(find.byKey(const ValueKey('cart_quantity_badge')), findsNothing);
+
+    await tester.tap(find.text('ADD TO CART'));
+    await tester.pump();
+    var cartBadge = find.byKey(const ValueKey('cart_quantity_badge'));
+    expect(cartBadge, findsOneWidget);
+    expect(
+      find.descendant(of: cartBadge, matching: find.text('1')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('ADD TO CART'));
+    await tester.pump();
+    cartBadge = find.byKey(const ValueKey('cart_quantity_badge'));
+    expect(
+      find.descendant(of: cartBadge, matching: find.text('2')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Include VAT'));
     await tester.pump();
@@ -120,25 +138,35 @@ void main() {
     expect(find.text('1000 units'), findsOneWidget);
     expect(find.text('\u00A3153.48'), findsOneWidget);
 
-    final ctaTop = tester.getTopLeft(find.text('ADD TO CART')).dy;
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));
+    await tester.tap(find.text('ADD TO CART'));
+    await tester.pump();
+    cartBadge = find.byKey(const ValueKey('cart_quantity_badge'));
+    expect(
+      find.descendant(of: cartBadge, matching: find.text('4')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.bySemanticsLabel('Cart').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('PRODUCT DESCRIPTION'), findsOneWidget);
-    expect(tester.getTopLeft(find.text('ADD TO CART')).dy, ctaTop);
-    expect(tester.takeException(), isNull);
+    expect(find.text('My Cart'), findsOneWidget);
+    expect(find.text('(2 items)'), findsOneWidget);
+    expect(find.text('Proceed to checkout — \u00A3285.36'), findsOneWidget);
+    expect(find.byKey(const ValueKey('cart_quantity_badge')), findsOneWidget);
+    expect(find.bySemanticsLabel('Increase cart quantity'), findsNWidgets(2));
 
-    await tester.tap(find.bySemanticsLabel('Back'));
+    await tester.tap(find.bySemanticsLabel('Add order note'));
     await tester.pumpAndSettle();
-
-    expect(find.text('500ml Kraft Round Bowls'), findsNWidgets(4));
-    expect(find.bySemanticsLabel('Back'), findsOneWidget);
-
-    await tester.tap(find.bySemanticsLabel('Back'));
+    await tester.enterText(
+      find.byType(TextField).first,
+      'Please leave at reception',
+    );
+    await tester.tap(find.bySemanticsLabel('Add order note'));
     await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Add order note'));
+    await tester.pumpAndSettle();
+    expect(find.text('Please leave at reception'), findsOneWidget);
 
-    expect(find.bySemanticsLabel('Back'), findsNothing);
-    expect(find.text('KRAFT RECTANGULAR BOWLS'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

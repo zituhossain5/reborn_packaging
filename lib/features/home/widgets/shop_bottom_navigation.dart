@@ -1,22 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../cart/state/cart_controller.dart';
+import '../../cart/widgets/cart_quantity_badge.dart';
+import '../../auth/state/mock_auth_controller.dart';
 
-class ShopBottomNavigation extends StatelessWidget {
-  const ShopBottomNavigation({this.cartBadgeCount, super.key});
+enum ShopNavigationItem { shop, cart, account }
+
+class ShopBottomNavigation extends ConsumerWidget {
+  const ShopBottomNavigation({
+    this.activeItem = ShopNavigationItem.shop,
+    super.key,
+  });
 
   static const _contentHeight = 54.0;
   static const _iconSize = 24.0;
 
-  final int? cartBadgeCount;
+  final ShopNavigationItem activeItem;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final effectiveBottomInset = bottomInset > 6 ? bottomInset - 6 : 0.0;
+    final cartQuantity = ref.watch(cartTotalQuantityProvider);
+    final isMockAuthenticated = ref.watch(mockAuthControllerProvider);
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -50,35 +62,44 @@ class ShopBottomNavigation extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: itemWidth,
-                    child: const _NavigationItem(
+                    child: _NavigationItem(
                       label: 'SHOP',
                       assetPath: 'assets/icons/shop.svg',
-                      color: AppColors.primary,
-                      iconPadding: EdgeInsets.all(3.75),
+                      selected: activeItem == ShopNavigationItem.shop,
+                      iconPadding: const EdgeInsets.all(3.75),
+                      onTap: () => context.go('/home'),
                     ),
                   ),
                   SizedBox(
                     width: itemWidth,
                     child: _NavigationItem(
                       label: 'CART',
-                      assetPath: 'assets/icons/cart.svg',
-                      color: AppColors.secondaryText,
+                      assetPath:
+                          activeItem == ShopNavigationItem.cart &&
+                              cartQuantity > 0
+                          ? 'assets/icons/cart_bag_filled.svg'
+                          : 'assets/icons/cart.svg',
+                      selected: activeItem == ShopNavigationItem.cart,
                       iconPadding: const EdgeInsets.fromLTRB(
                         1.685,
                         1.687,
                         1.685,
                         3.938,
                       ),
-                      badgeCount: cartBadgeCount,
+                      badgeCount: cartQuantity,
+                      onTap: () => context.go('/cart'),
                     ),
                   ),
                   SizedBox(
                     width: itemWidth,
-                    child: const _NavigationItem(
+                    child: _NavigationItem(
                       label: 'ACCOUNT',
                       assetPath: 'assets/icons/account.svg',
-                      color: AppColors.secondaryText,
-                      iconPadding: EdgeInsets.all(2.438),
+                      selected: activeItem == ShopNavigationItem.account,
+                      iconPadding: const EdgeInsets.all(2.438),
+                      onTap: () => context.go(
+                        isMockAuthenticated ? '/account' : '/login',
+                      ),
                     ),
                   ),
                 ],
@@ -95,25 +116,27 @@ class _NavigationItem extends StatelessWidget {
   const _NavigationItem({
     required this.label,
     required this.assetPath,
-    required this.color,
+    required this.selected,
     required this.iconPadding,
+    required this.onTap,
     this.badgeCount,
   });
 
   final String label;
   final String assetPath;
-  final Color color;
+  final bool selected;
   final EdgeInsets iconPadding;
+  final VoidCallback? onTap;
   final int? badgeCount;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      selected: label == 'SHOP',
+      selected: selected,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () {},
+        onTap: onTap,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -134,35 +157,20 @@ class _NavigationItem extends StatelessWidget {
                             child: SvgPicture.asset(
                               assetPath,
                               colorFilter: ColorFilter.mode(
-                                color,
+                                selected
+                                    ? AppColors.primary
+                                    : AppColors.secondaryText,
                                 BlendMode.srcIn,
                               ),
                             ),
                           ),
                         ),
                       ),
-                      if (badgeCount != null)
+                      if (badgeCount != null && badgeCount! > 0)
                         Positioned(
                           left: constraints.maxWidth / 2 + 4.5,
                           top: -4,
-                          child: Container(
-                            width: 16,
-                            height: 16,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              border: Border.all(
-                                color: AppColors.white,
-                                width: 2,
-                              ),
-                              borderRadius: BorderRadius.circular(100),
-                            ),
-                            child: Text(
-                              '$badgeCount',
-                              maxLines: 1,
-                              style: AppTypography.navigationBadge,
-                            ),
-                          ),
+                          child: CartQuantityBadge(quantity: badgeCount!),
                         ),
                     ],
                   );
@@ -174,7 +182,7 @@ class _NavigationItem extends StatelessWidget {
               label,
               maxLines: 1,
               textAlign: TextAlign.center,
-              style: label == 'SHOP'
+              style: selected
                   ? AppTypography.navigationActiveLabel
                   : AppTypography.navigationInactiveLabel,
             ),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../cart/state/cart_controller.dart';
 import '../../home/widgets/home_header.dart';
 import '../models/product_details.dart';
 import '../state/product_selection_controller.dart';
@@ -15,16 +17,17 @@ import '../widgets/product_option_chip.dart';
 import '../widgets/product_specification_row.dart';
 import '../widgets/quantity_selector.dart';
 
-class ProductDetailsScreen extends StatefulWidget {
+class ProductDetailsScreen extends ConsumerStatefulWidget {
   const ProductDetailsScreen({required this.product, super.key});
 
   final ProductDetails product;
 
   @override
-  State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
+  ConsumerState<ProductDetailsScreen> createState() =>
+      _ProductDetailsScreenState();
 }
 
-class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   late final ProductSelectionController _selection;
 
   ProductDetails get product => widget.product;
@@ -50,13 +53,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         backgroundColor: AppColors.backgroundLight,
         bottomNavigationBar: ProductBottomBar(
           totalPrice: _selection.totalPrice,
-          onAddToCart: () {},
+          onAddToCart: _addToCart,
         ),
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              HomeHeader(onBack: context.pop, showCart: true, showShadow: true),
+              HomeHeader(
+                onBack: context.pop,
+                showCart: true,
+                showShadow: true,
+                onCart: () => context.push('/cart'),
+              ),
               Expanded(
                 child: CustomScrollView(
                   slivers: [
@@ -195,6 +203,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   void _toggleIncludeVat() {
     setState(_selection.toggleIncludeVat);
+  }
+
+  void _addToCart() {
+    ref
+        .read(cartControllerProvider.notifier)
+        .addVariant(
+          product: product,
+          variant: _selectedVariant,
+          quantity: _selection.quantity,
+        );
   }
 }
 

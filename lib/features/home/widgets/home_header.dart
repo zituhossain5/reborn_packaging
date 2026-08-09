@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../cart/state/cart_controller.dart';
+import '../../cart/widgets/cart_quantity_badge.dart';
 
-class HomeHeader extends StatelessWidget {
+class HomeHeader extends ConsumerWidget {
   const HomeHeader({
     this.onBack,
     this.showCart = false,
     this.showShadow = false,
+    this.onCart,
+    this.onSearch,
     super.key,
   });
 
@@ -19,9 +24,13 @@ class HomeHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final bool showCart;
   final bool showShadow;
+  final VoidCallback? onCart;
+  final VoidCallback? onSearch;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cartQuantity = ref.watch(cartTotalQuantityProvider);
+
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -45,8 +54,8 @@ class HomeHeader extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: onBack == null
-                ? [_logo(), _trailingButton()]
-                : [_backButton(), _logo(), _trailingButton()],
+                ? [_logo(), _trailingButton(cartQuantity)]
+                : [_backButton(), _logo(), _trailingButton(cartQuantity)],
           ),
         ),
       ),
@@ -92,7 +101,7 @@ class HomeHeader extends StatelessWidget {
       label: 'Search',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () {},
+        onTap: onSearch,
         child: SizedBox.square(
           dimension: _iconSize,
           child: Padding(
@@ -110,31 +119,42 @@ class HomeHeader extends StatelessWidget {
     );
   }
 
-  Widget _trailingButton() {
-    return showCart ? _cartButton() : _searchButton();
+  Widget _trailingButton(int cartQuantity) {
+    return showCart ? _cartButton(cartQuantity) : _searchButton();
   }
 
-  Widget _cartButton() {
+  Widget _cartButton(int cartQuantity) {
     return Semantics(
       button: true,
+      explicitChildNodes: true,
       label: 'Cart',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () {},
+        onTap: onCart,
         child: SizedBox.square(
           dimension: 36,
-          child: Center(
-            child: SizedBox(
-              width: 21,
-              height: 18.75,
-              child: SvgPicture.asset(
-                'assets/icons/add_to_cart_bag.svg',
-                colorFilter: const ColorFilter.mode(
-                  AppColors.black,
-                  BlendMode.srcIn,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Center(
+                child: SizedBox(
+                  width: 21,
+                  height: 18.75,
+                  child: SvgPicture.asset(
+                    'assets/icons/add_to_cart_bag.svg',
+                    colorFilter: const ColorFilter.mode(
+                      AppColors.black,
+                      BlendMode.srcIn,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              Positioned(
+                left: 20,
+                top: 0,
+                child: CartQuantityBadge(quantity: cartQuantity),
+              ),
+            ],
           ),
         ),
       ),

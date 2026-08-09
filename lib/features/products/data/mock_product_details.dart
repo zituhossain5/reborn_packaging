@@ -1,4 +1,6 @@
 import '../models/product_details.dart';
+import '../models/product_item.dart';
+import 'mock_products.dart';
 
 const _sizes = ['500ml', '650ml', '750ml', '1000ml'];
 const _lidOptions = ['Without Lid', 'With PET Lid', 'With PP Lid'];
@@ -208,10 +210,69 @@ final mockKraftRoundBowlsProduct = ProductDetails(
 
 final mockProductDetailsByHandle = <String, ProductDetails>{
   mockKraftRoundBowlsProduct.handle: mockKraftRoundBowlsProduct,
+  for (final product in mockProductCatalog)
+    if (product.handle != mockKraftRoundBowlsProduct.handle)
+      product.handle: _simpleProductDetails(product),
 };
 
 ProductDetails? mockProductDetailsForHandle(String handle) {
   return mockProductDetailsByHandle[handle];
+}
+
+ProductDetails _simpleProductDetails(ProductItem product) {
+  final variants = [
+    for (final size in product.variantSizes)
+      ProductVariant(
+        id: '${product.handle}-${_slug(size)}-standard',
+        size: size,
+        lid: 'Standard',
+        price: product.price,
+        availableForSale: true,
+        piecesPerPack: product.quantity,
+        quantityAvailable: 100,
+        imageAsset: product.imageAsset,
+      ),
+  ];
+
+  return ProductDetails(
+    id: product.id,
+    handle: product.handle,
+    title: product.title,
+    images: [product.imageAsset],
+    currency: 'GBP',
+    selectedVariantId: variants.first.id,
+    variants: variants,
+    sizes: product.variantSizes,
+    lidOptions: const ['Standard'],
+    quantityRule: const ProductQuantityRule(minimum: 1, increment: 1),
+    description: [
+      ProductDescriptionParagraph(
+        segments: [
+          ProductDescriptionSegment(
+            '${product.title} for reliable food-service and takeaway packaging.',
+          ),
+        ],
+      ),
+    ],
+    features: const [
+      ProductFeature(
+        title: 'Food-Service Ready:',
+        description:
+            'Designed for dependable everyday use in takeaway, catering and hospitality businesses.',
+      ),
+    ],
+    specifications: [
+      ProductSpecification(label: 'Product Name', value: product.title),
+      ProductSpecification(
+        label: 'Packaging',
+        value: '${product.quantity} units per case',
+      ),
+    ],
+  );
+}
+
+String _slug(String value) {
+  return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
 }
 
 abstract final class _MockVariantData {
@@ -231,6 +292,7 @@ abstract final class _MockVariantData {
       availableForSale: availableForSale,
       piecesPerPack: piecesPerPack,
       quantityAvailable: quantityAvailable,
+      imageAsset: 'assets/images/products/cart_kraft_round_bowl.png',
     );
   }
 }

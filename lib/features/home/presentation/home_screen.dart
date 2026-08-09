@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
             bottom: false,
             child: Column(
               children: [
-                const HomeHeader(),
+                HomeHeader(onSearch: () => context.push('/search')),
                 const DeliveryBanner(),
                 Expanded(
                   child: ColoredBox(

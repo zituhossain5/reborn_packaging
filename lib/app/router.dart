@@ -1,16 +1,30 @@
 import 'package:go_router/go_router.dart';
 
 import '../features/home/presentation/home_screen.dart';
+import '../features/cart/presentation/cart_screen.dart';
+import '../features/checkout/presentation/checkout_screen.dart';
+import '../features/checkout/presentation/payment_screen.dart';
+import '../features/checkout/presentation/order_confirmation_screen.dart';
 import '../features/products/data/mock_product_details.dart';
 import '../features/products/presentation/collection_products_screen.dart';
 import '../features/products/presentation/product_details_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
+import '../features/search/presentation/search_screen.dart';
+import '../features/account/presentation/account_screen.dart';
+import '../features/auth/presentation/login_screen.dart';
 
 abstract final class AppRoutes {
   static const splash = '/';
   static const home = '/home';
   static const collectionProducts = '/collections/:handle';
   static const productDetails = '/products/:handle';
+  static const cart = '/cart';
+  static const search = '/search';
+  static const checkout = '/checkout';
+  static const checkoutPayment = '/checkout/payment';
+  static const checkoutConfirmation = '/checkout/confirmation';
+  static const login = '/login';
+  static const account = '/account';
 }
 
 final GoRouter appRouter = GoRouter(
@@ -44,6 +58,34 @@ final GoRouter appRouter = GoRouter(
 
         return ProductDetailsScreen(product: product);
       },
+    ),
+    GoRoute(
+      path: AppRoutes.cart,
+      builder: (context, state) => const CartScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.search,
+      builder: (context, state) => const SearchScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.checkout,
+      builder: (context, state) => const CheckoutScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.checkoutPayment,
+      builder: (context, state) => const PaymentScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.checkoutConfirmation,
+      builder: (context, state) => const OrderConfirmationScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.login,
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.account,
+      builder: (context, state) => const AccountScreen(),
     ),
   ],
 );
