@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reborn_packaging/app/app.dart';
+import 'package:reborn_packaging/features/home/data/mock_collections.dart';
+import 'package:reborn_packaging/features/home/models/collection_page.dart';
+import 'package:reborn_packaging/features/home/state/home_collections_provider.dart';
 import 'package:reborn_packaging/features/products/widgets/product_option_chip.dart';
 
 void main() {
@@ -15,7 +18,20 @@ void main() {
     addTearDown(tester.view.resetPadding);
     addTearDown(tester.view.resetViewPadding);
 
-    await tester.pumpWidget(const ProviderScope(child: RebornPackagingApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeCollectionsProvider.overrideWith(
+            (ref) async => const CollectionCatalog(
+              items: mockCollections,
+              pageInfo: CollectionPageInfo(hasNextPage: false, endCursor: null),
+              pagesFetched: 1,
+            ),
+          ),
+        ],
+        child: const RebornPackagingApp(),
+      ),
+    );
 
     expect(find.byType(Image), findsOneWidget);
     expect(find.text('PRODUCT COLLECTIONS'), findsNothing);
@@ -40,7 +56,7 @@ void main() {
 
     for (final label in [
       'PRODUCT COLLECTIONS',
-      '25 collections',
+      '8 collections',
       'KRAFT ROUND BOWLS',
       'FREE NEXT DAY DELIVERY ON ORDERS OVER \u00A3100',
       'SHOP',

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_typography.dart';
 
 class CollectionSectionHeader extends StatelessWidget {
-  const CollectionSectionHeader({required this.collectionCount, super.key});
+  const CollectionSectionHeader({this.collectionCount, super.key});
 
-  final int collectionCount;
+  final int? collectionCount;
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +22,13 @@ class CollectionSectionHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          '$collectionCount collections',
-          maxLines: 1,
-          textAlign: TextAlign.right,
-          style: AppTypography.collectionCount,
-        ),
+        if (collectionCount != null)
+          Text(
+            '$collectionCount collections',
+            maxLines: 1,
+            textAlign: TextAlign.right,
+            style: AppTypography.collectionCount,
+          ),
       ],
     );
   }

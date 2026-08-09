@@ -33,7 +33,7 @@ class CollectionCard extends StatelessWidget {
               children: [
                 SizedBox.square(
                   dimension: _imageSize,
-                  child: Image.asset(item.imageAsset, fit: BoxFit.contain),
+                  child: _CollectionImage(item: item),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 SizedBox(
@@ -51,6 +51,57 @@ class CollectionCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CollectionImage extends StatelessWidget {
+  const _CollectionImage({required this.item});
+
+  final CollectionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = item.imageUrl;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.contain,
+        semanticLabel: item.imageAltText,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => const _ImagePlaceholder(),
+      );
+    }
+
+    final imageAsset = item.imageAsset;
+    if (imageAsset != null && imageAsset.isNotEmpty) {
+      return Image.asset(imageAsset, fit: BoxFit.contain);
+    }
+
+    return const _ImagePlaceholder();
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Icon(
+      Icons.image_not_supported_outlined,
+      color: AppColors.lightText,
+      size: 24,
     );
   }
 }
