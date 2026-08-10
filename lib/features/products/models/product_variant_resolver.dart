@@ -24,3 +24,18 @@ ProductVariant? firstAvailableVariantForSize({
   }
   return null;
 }
+
+ProductVariant? resolveVariantForOptions({
+  required ProductDetails product,
+  required Map<String, String> selectedOptions,
+  bool availableOnly = true,
+}) {
+  for (final variant in product.variants) {
+    if (availableOnly && !variant.isAvailable) continue;
+    final matches = selectedOptions.entries.every(
+      (entry) => variant.optionValue(entry.key) == entry.value,
+    );
+    if (matches) return variant;
+  }
+  return null;
+}

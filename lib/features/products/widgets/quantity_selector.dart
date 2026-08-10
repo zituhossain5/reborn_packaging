@@ -10,14 +10,16 @@ class QuantitySelector extends StatelessWidget {
     required this.quantity,
     required this.totalUnits,
     required this.canDecrease,
+    required this.canIncrease,
     required this.onDecrease,
     required this.onIncrease,
     super.key,
   });
 
   final int quantity;
-  final int totalUnits;
+  final int? totalUnits;
   final bool canDecrease;
+  final bool canIncrease;
   final VoidCallback onDecrease;
   final VoidCallback onIncrease;
 
@@ -51,7 +53,7 @@ class QuantitySelector extends StatelessWidget {
                 _QuantityButton(
                   semanticLabel: 'Increase quantity',
                   assetPath: 'assets/icons/quantity_plus.svg',
-                  enabled: true,
+                  enabled: canIncrease,
                   onTap: onIncrease,
                 ),
               ],
@@ -70,11 +72,12 @@ class QuantitySelector extends StatelessWidget {
                   style: AppTypography.quantityCaption,
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '$totalUnits units',
-                  maxLines: 1,
-                  style: AppTypography.quantityValue,
-                ),
+                if (totalUnits != null)
+                  Text(
+                    '$totalUnits units',
+                    maxLines: 1,
+                    style: AppTypography.quantityValue,
+                  ),
               ],
             ),
           ),

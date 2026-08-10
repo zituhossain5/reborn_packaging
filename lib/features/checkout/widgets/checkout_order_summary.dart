@@ -167,7 +167,11 @@ class _CheckoutProductRow extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
-                child: Image.asset(item.imageAsset, fit: BoxFit.cover),
+                child: item.imageAsset.startsWith('http')
+                    ? Image.network(item.imageAsset, fit: BoxFit.cover)
+                    : item.imageAsset.isNotEmpty
+                    ? Image.asset(item.imageAsset, fit: BoxFit.cover)
+                    : const SizedBox.shrink(),
               ),
               Positioned(
                 right: -4,

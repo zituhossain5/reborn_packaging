@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
+import 'package:reborn_packaging/features/products/models/product_details.dart';
 import 'package:reborn_packaging/features/products/state/product_selection_controller.dart';
 
 void main() {
@@ -74,5 +75,81 @@ void main() {
       expect(controller.canDecrease, isFalse);
       expect(controller.totalPrice, 54.95);
     });
+
+    test('resolves generic options and enforces variant quantity rules', () {
+      final controller = ProductSelectionController(_shopifyStyleProduct);
+
+      expect(controller.quantity, 2);
+      expect(controller.canDecrease, isFalse);
+      expect(controller.isOptionValueAvailable('Size', '750ml'), isTrue);
+      expect(controller.isOptionValueAvailable('Lid', 'PET Lid'), isFalse);
+
+      controller.selectOption('Size', '750ml');
+      expect(controller.selectedVariant.id, 'variant-750-no-lid');
+      expect(controller.displayedVariantPrice, 44.95);
+      expect(controller.quantity, 5);
+
+      controller.increaseQuantity();
+      expect(controller.quantity, 10);
+      expect(controller.canIncrease, isFalse);
+      controller.increaseQuantity();
+      expect(controller.quantity, 10);
+    });
   });
 }
+
+const _shopifyStyleProduct = ProductDetails(
+  id: 'product-real-options',
+  handle: 'real-options',
+  title: 'Real Options Product',
+  images: [],
+  currency: 'GBP',
+  selectedVariantId: 'variant-500-no-lid',
+  variants: [
+    ProductVariant(
+      id: 'variant-500-no-lid',
+      size: '500ml',
+      lid: 'Without Lid',
+      price: 41.95,
+      availableForSale: true,
+      selectedOptions: [
+        ProductSelectedOption(name: 'Size', value: '500ml'),
+        ProductSelectedOption(name: 'Lid', value: 'Without Lid'),
+      ],
+      quantityRule: ProductQuantityRule(minimum: 2, maximum: 6, increment: 2),
+    ),
+    ProductVariant(
+      id: 'variant-500-pet-lid',
+      size: '500ml',
+      lid: 'PET Lid',
+      price: 60,
+      availableForSale: false,
+      selectedOptions: [
+        ProductSelectedOption(name: 'Size', value: '500ml'),
+        ProductSelectedOption(name: 'Lid', value: 'PET Lid'),
+      ],
+    ),
+    ProductVariant(
+      id: 'variant-750-no-lid',
+      size: '750ml',
+      lid: 'Without Lid',
+      price: 44.95,
+      availableForSale: true,
+      selectedOptions: [
+        ProductSelectedOption(name: 'Size', value: '750ml'),
+        ProductSelectedOption(name: 'Lid', value: 'Without Lid'),
+      ],
+      quantityRule: ProductQuantityRule(minimum: 5, maximum: 10, increment: 5),
+    ),
+  ],
+  sizes: ['500ml', '750ml'],
+  lidOptions: ['Without Lid', 'PET Lid'],
+  quantityRule: ProductQuantityRule(minimum: 2, increment: 2),
+  description: [],
+  features: [],
+  specifications: [],
+  options: [
+    ProductOption(id: 'size', name: 'Size', values: ['500ml', '750ml']),
+    ProductOption(id: 'lid', name: 'Lid', values: ['Without Lid', 'PET Lid']),
+  ],
+);

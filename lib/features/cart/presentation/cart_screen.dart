@@ -196,12 +196,22 @@ class _CartItemCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Image.asset(
-            item.imageAsset,
-            width: 64,
-            height: 64,
-            fit: BoxFit.cover,
-          ),
+          if (item.imageAsset.startsWith('http'))
+            Image.network(
+              item.imageAsset,
+              width: 64,
+              height: 64,
+              fit: BoxFit.cover,
+            )
+          else if (item.imageAsset.isNotEmpty)
+            Image.asset(
+              item.imageAsset,
+              width: 64,
+              height: 64,
+              fit: BoxFit.cover,
+            )
+          else
+            const SizedBox.square(dimension: 64),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -221,10 +231,11 @@ class _CartItemCard extends StatelessWidget {
                             style: AppTypography.cartItemTitle,
                           ),
                           const SizedBox(height: AppSpacing.tiny),
-                          Text(
-                            '${item.piecesPerPack} QTY PER CASE',
-                            style: AppTypography.cartPackQuantity,
-                          ),
+                          if (item.piecesPerPack != null)
+                            Text(
+                              '${item.piecesPerPack} QTY PER CASE',
+                              style: AppTypography.cartPackQuantity,
+                            ),
                         ],
                       ),
                     ),

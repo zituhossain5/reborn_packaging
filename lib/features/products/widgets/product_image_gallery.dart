@@ -44,9 +44,10 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
                       child: Center(
                         child: SizedBox.square(
                           dimension: _imageSize,
-                          child: Image.asset(
-                            widget.images[_currentIndex],
-                            fit: BoxFit.cover,
+                          child: _GalleryImage(
+                            source: widget.images.isEmpty
+                                ? ''
+                                : widget.images[_currentIndex],
                           ),
                         ),
                       ),
@@ -87,6 +88,7 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
   }
 
   void _showPrevious() {
+    if (widget.images.isEmpty) return;
     setState(() {
       _currentIndex =
           (_currentIndex - 1 + widget.images.length) % widget.images.length;
@@ -94,9 +96,47 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
   }
 
   void _showNext() {
+    if (widget.images.isEmpty) return;
     setState(() {
       _currentIndex = (_currentIndex + 1) % widget.images.length;
     });
+  }
+}
+
+class _GalleryImage extends StatelessWidget {
+  const _GalleryImage({required this.source});
+
+  final String source;
+
+  @override
+  Widget build(BuildContext context) {
+    if (source.isEmpty) {
+      return const Icon(
+        Icons.image_not_supported_outlined,
+        color: AppColors.lightText,
+        size: 32,
+      );
+    }
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return Image.network(
+        source,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) => progress == null
+            ? child
+            : const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2,
+                ),
+              ),
+        errorBuilder: (context, error, stackTrace) => const Icon(
+          Icons.image_not_supported_outlined,
+          color: AppColors.lightText,
+          size: 32,
+        ),
+      );
+    }
+    return Image.asset(source, fit: BoxFit.cover);
   }
 }
 

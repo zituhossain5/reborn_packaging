@@ -5,9 +5,8 @@ import '../features/cart/presentation/cart_screen.dart';
 import '../features/checkout/presentation/checkout_screen.dart';
 import '../features/checkout/presentation/payment_screen.dart';
 import '../features/checkout/presentation/order_confirmation_screen.dart';
-import '../features/products/data/mock_product_details.dart';
 import '../features/products/presentation/collection_products_screen.dart';
-import '../features/products/presentation/product_details_screen.dart';
+import '../features/products/presentation/product_details_route_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/account/presentation/account_screen.dart';
@@ -54,15 +53,7 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.productDetails,
       builder: (context, state) {
         final handle = state.pathParameters['handle']!;
-        final fallbackHandle = state.extra as String?;
-        final product =
-            mockProductDetailsForHandle(handle) ??
-            (fallbackHandle == null
-                ? null
-                : mockProductDetailsForHandle(fallbackHandle)) ??
-            mockProductDetailsForHandle('kraft-round-bowls')!;
-
-        return ProductDetailsScreen(product: product);
+        return ProductDetailsRouteScreen(productHandle: handle);
       },
     ),
     GoRoute(

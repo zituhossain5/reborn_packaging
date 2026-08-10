@@ -53,6 +53,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         backgroundColor: AppColors.backgroundLight,
         bottomNavigationBar: ProductBottomBar(
           totalPrice: _selection.totalPrice,
+          enabled: _selectedVariant.isAvailable,
           onAddToCart: _addToCart,
         ),
         body: SafeArea(
@@ -70,7 +71,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   slivers: [
                     SliverToBoxAdapter(
                       child: ProductImageGallery(
-                        key: ValueKey(_selectedVariant.imageAsset),
+                        key: ValueKey(_selectedVariant.imageSource),
                         images: _selection.galleryImages,
                       ),
                     ),
@@ -105,15 +106,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                               const SizedBox(height: 20),
                               const _SectionDivider(),
                               const SizedBox(height: 20),
-                              _ProductDescription(product: product),
-                              const SizedBox(height: 20),
-                              const _SectionDivider(),
-                              const SizedBox(height: 20),
-                              _ProductFeatures(product: product),
-                              const SizedBox(height: 20),
-                              const _SectionDivider(),
-                              const SizedBox(height: 20),
-                              _ProductSpecifications(product: product),
+                              _ProductContent(product: product),
                             ],
                           ),
                         ),
@@ -135,46 +128,61 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   }
 
   Widget _variantSelectors() {
+    final options = product.options.isNotEmpty
+        ? product.options
+        : [
+            ProductOption(id: 'size', name: 'Size', values: product.sizes),
+            ProductOption(id: 'lid', name: 'Lid', values: product.lidOptions),
+          ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _ProductOptionGroup(
-          label: 'SIZE',
-          children: [
-            for (final size in product.sizes)
-              ProductOptionChip(
-                label: size,
-                selected: size == _selectedVariant.size,
-                enabled: _sizeIsAvailable(size),
-                onTap: () => _selectSize(size),
-              ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        _ProductOptionGroup(
-          label: 'LID OPTION',
-          children: [
-            for (final lidOption in product.lidOptions)
-              ProductOptionChip(
-                label: lidOption,
-                selected: lidOption == _selectedVariant.lid,
-                enabled: _lidIsAvailable(lidOption),
-                onTap: () => _selectLid(lidOption),
-              ),
-          ],
-        ),
-        const SizedBox(height: 20),
+        for (final option in options) ...[
+          _ProductOptionGroup(
+            label: option.name.toLowerCase().contains('lid')
+                ? 'LID OPTION'
+                : option.name.toUpperCase(),
+            children: [
+              for (final value in option.values)
+                ProductOptionChip(
+                  label: value,
+                  selected: product.options.isEmpty
+                      ? (option.name == 'Size'
+                            ? _selectedVariant.size == value
+                            : _selectedVariant.lid == value)
+                      : _selection.selectedValue(option.name) == value,
+                  enabled: product.options.isEmpty
+                      ? (option.name == 'Size'
+                            ? _sizeIsAvailable(value)
+                            : _lidIsAvailable(value))
+                      : _selection.isOptionValueAvailable(option.name, value),
+                  onTap: () => product.options.isEmpty
+                      ? (option.name == 'Size'
+                            ? _selectSize(value)
+                            : _selectLid(value))
+                      : _selectOption(option.name, value),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+        ],
         const Text('QUANTITY', style: AppTypography.productOptionLabel),
         const SizedBox(height: AppSpacing.sm),
         QuantitySelector(
           quantity: _selection.quantity,
           totalUnits: _selection.totalUnits,
           canDecrease: _selection.canDecrease,
+          canIncrease: _selection.canIncrease,
           onDecrease: _decreaseQuantity,
           onIncrease: _increaseQuantity,
         ),
       ],
     );
+  }
+
+  void _selectOption(String optionName, String value) {
+    setState(() => _selection.selectOption(optionName, value));
   }
 
   bool _sizeIsAvailable(String size) {
@@ -229,7 +237,7 @@ class _ProductInformation extends StatelessWidget {
   final ProductDetails product;
   final ProductVariant variant;
   final double displayPrice;
-  final double displayUnitPrice;
+  final double? displayUnitPrice;
   final bool includeVat;
   final VoidCallback onToggleIncludeVat;
 
@@ -255,9 +263,14 @@ class _ProductInformation extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         Text(product.title, style: AppTypography.productDetailsTitle),
         const SizedBox(height: AppSpacing.xxs),
-        Text(
-          '${variant.piecesPerPack} QTY',
-          style: AppTypography.productDetailsQuantity,
+        SizedBox(
+          height: 16,
+          child: variant.piecesPerPack == null
+              ? null
+              : Text(
+                  '${variant.piecesPerPack} QTY',
+                  style: AppTypography.productDetailsQuantity,
+                ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Row(
@@ -268,24 +281,26 @@ class _ProductInformation extends StatelessWidget {
               maxLines: 1,
               style: AppTypography.productDetailsPrice,
             ),
-            const SizedBox(width: AppSpacing.xs),
-            Flexible(
-              child: Text(
-                '\u00A3${displayUnitPrice.toStringAsFixed(4)} / piece',
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                style: AppTypography.productDetailsMeta,
+            if (displayUnitPrice != null) ...[
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  '\u00A3${displayUnitPrice!.toStringAsFixed(4)} / piece',
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  style: AppTypography.productDetailsMeta,
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Container(
-              width: 2,
-              height: 2,
-              decoration: const BoxDecoration(
-                color: AppColors.lightText,
-                shape: BoxShape.circle,
+              const SizedBox(width: AppSpacing.xs),
+              Container(
+                width: 2,
+                height: 2,
+                decoration: const BoxDecoration(
+                  color: AppColors.lightText,
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
+            ],
             const SizedBox(width: AppSpacing.xs),
             Text(
               includeVat ? 'Inc. VAT' : 'Ex. VAT',
@@ -362,6 +377,36 @@ class _ProductOptionGroup extends StatelessWidget {
   }
 }
 
+class _ProductContent extends StatelessWidget {
+  const _ProductContent({required this.product});
+
+  final ProductDetails product;
+
+  @override
+  Widget build(BuildContext context) {
+    final sections = <Widget>[
+      if (product.description.isNotEmpty) _ProductDescription(product: product),
+      if (product.features.isNotEmpty) _ProductFeatures(product: product),
+      if (product.specifications.isNotEmpty)
+        _ProductSpecifications(product: product),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < sections.length; index++) ...[
+          if (index > 0) ...[
+            const SizedBox(height: 20),
+            const _SectionDivider(),
+            const SizedBox(height: 20),
+          ],
+          sections[index],
+        ],
+      ],
+    );
+  }
+}
+
 class _ProductDescription extends StatelessWidget {
   const _ProductDescription({required this.product});
 
@@ -375,22 +420,45 @@ class _ProductDescription extends StatelessWidget {
         const Text('PRODUCT DESCRIPTION', style: AppTypography.sectionHeading),
         const SizedBox(height: 20),
         for (var index = 0; index < product.description.length; index++) ...[
-          Text.rich(
-            TextSpan(
-              children: [
-                for (final segment in product.description[index].segments)
-                  TextSpan(
-                    text: segment.text,
-                    style: segment.emphasized
-                        ? AppTypography.productDescriptionEmphasis
-                        : AppTypography.productDescriptionBody,
-                  ),
-              ],
-            ),
-          ),
+          _ProductDescriptionBlock(block: product.description[index]),
           if (index < product.description.length - 1)
             const SizedBox(height: 19.2),
         ],
+      ],
+    );
+  }
+}
+
+class _ProductDescriptionBlock extends StatelessWidget {
+  const _ProductDescriptionBlock({required this.block});
+
+  final ProductDescriptionParagraph block;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Text.rich(
+      TextSpan(
+        children: [
+          for (final segment in block.segments)
+            TextSpan(
+              text: segment.text,
+              style: block.type == ProductDescriptionBlockType.heading
+                  ? AppTypography.productFeatureTitle
+                  : segment.emphasized
+                  ? AppTypography.productDescriptionEmphasis
+                  : AppTypography.productDescriptionBody,
+            ),
+        ],
+      ),
+    );
+
+    if (block.type != ProductDescriptionBlockType.listItem) return text;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('•', style: AppTypography.productDescriptionBody),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(child: text),
       ],
     );
   }

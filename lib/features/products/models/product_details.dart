@@ -13,6 +13,12 @@ class ProductDetails {
     required this.description,
     required this.features,
     required this.specifications,
+    this.descriptionText = '',
+    this.descriptionHtml = '',
+    this.availableForSale = true,
+    this.featuredImage,
+    this.imageItems = const [],
+    this.options = const [],
   });
 
   final String id;
@@ -28,6 +34,12 @@ class ProductDetails {
   final List<ProductDescriptionParagraph> description;
   final List<ProductFeature> features;
   final List<ProductSpecification> specifications;
+  final String descriptionText;
+  final String descriptionHtml;
+  final bool availableForSale;
+  final ProductImage? featuredImage;
+  final List<ProductImage> imageItems;
+  final List<ProductOption> options;
 
   ProductVariant get selectedVariant {
     return variants.firstWhere((variant) => variant.id == selectedVariantId);
@@ -41,9 +53,18 @@ class ProductVariant {
     required this.lid,
     required this.price,
     required this.availableForSale,
-    required this.piecesPerPack,
-    required this.quantityAvailable,
+    this.piecesPerPack,
+    this.quantityAvailable,
     this.imageAsset,
+    this.title = '',
+    this.sku,
+    this.selectedOptions = const [],
+    this.compareAtPrice,
+    this.image,
+    this.shopifyUnitPrice,
+    this.unitPriceMeasurement,
+    this.quantityRule = const ProductQuantityRule(minimum: 1, increment: 1),
+    this.currencyCode = 'GBP',
   });
 
   final String id;
@@ -51,22 +72,57 @@ class ProductVariant {
   final String lid;
   final double price;
   final bool availableForSale;
-  final int piecesPerPack;
-  final int quantityAvailable;
+  final int? piecesPerPack;
+  final int? quantityAvailable;
   final String? imageAsset;
+  final String title;
+  final String? sku;
+  final List<ProductSelectedOption> selectedOptions;
+  final double? compareAtPrice;
+  final ProductImage? image;
+  final double? shopifyUnitPrice;
+  final UnitPriceMeasurement? unitPriceMeasurement;
+  final ProductQuantityRule quantityRule;
+  final String currencyCode;
 
   double get priceExVat => price;
-  double get unitPrice => price / piecesPerPack;
-  bool get isAvailable => availableForSale && quantityAvailable > 0;
+  double? get unitPrice {
+    final packQuantity = piecesPerPack;
+    return packQuantity == null ? null : price / packQuantity;
+  }
+
+  bool get isAvailable => availableForSale;
+
+  String? optionValue(String optionName) {
+    final normalizedName = optionName.toLowerCase();
+    for (final option in selectedOptions) {
+      if (option.name.toLowerCase() == normalizedName) return option.value;
+    }
+    return null;
+  }
+
+  String get imageSource => image?.url ?? imageAsset ?? '';
 }
 
 class ProductQuantityRule {
-  const ProductQuantityRule({required this.minimum, required this.increment});
+  const ProductQuantityRule({
+    required this.minimum,
+    required this.increment,
+    this.maximum,
+  });
 
   final int minimum;
   final int increment;
+  final int? maximum;
 
-  int increase(int quantity) => quantity + increment;
+  bool canIncrease(int quantity) {
+    final nextQuantity = quantity + increment;
+    return maximum == null || nextQuantity <= maximum!;
+  }
+
+  int increase(int quantity) {
+    return canIncrease(quantity) ? quantity + increment : quantity;
+  }
 
   int decrease(int quantity) {
     final nextQuantity = quantity - increment;
@@ -78,10 +134,58 @@ class ProductQuantityRule {
   }
 }
 
+class ProductImage {
+  const ProductImage({required this.url, this.altText});
+
+  final String url;
+  final String? altText;
+}
+
+class ProductOption {
+  const ProductOption({
+    required this.id,
+    required this.name,
+    required this.values,
+  });
+
+  final String id;
+  final String name;
+  final List<String> values;
+}
+
+class ProductSelectedOption {
+  const ProductSelectedOption({required this.name, required this.value});
+
+  final String name;
+  final String value;
+}
+
+class UnitPriceMeasurement {
+  const UnitPriceMeasurement({
+    required this.measuredType,
+    required this.quantityUnit,
+    required this.quantityValue,
+    required this.referenceUnit,
+    required this.referenceValue,
+  });
+
+  final String measuredType;
+  final String quantityUnit;
+  final double quantityValue;
+  final String referenceUnit;
+  final int referenceValue;
+}
+
+enum ProductDescriptionBlockType { paragraph, heading, listItem }
+
 class ProductDescriptionParagraph {
-  const ProductDescriptionParagraph({required this.segments});
+  const ProductDescriptionParagraph({
+    required this.segments,
+    this.type = ProductDescriptionBlockType.paragraph,
+  });
 
   final List<ProductDescriptionSegment> segments;
+  final ProductDescriptionBlockType type;
 }
 
 class ProductDescriptionSegment {

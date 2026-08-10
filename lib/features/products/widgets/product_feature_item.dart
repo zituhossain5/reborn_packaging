@@ -35,11 +35,13 @@ class ProductFeatureItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(feature.title, style: AppTypography.productFeatureTitle),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                feature.description,
-                style: AppTypography.productFeatureBody,
-              ),
+              if (feature.description.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  feature.description,
+                  style: AppTypography.productFeatureBody,
+                ),
+              ],
             ],
           ),
         ),

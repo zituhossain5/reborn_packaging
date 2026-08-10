@@ -9,11 +9,13 @@ class ProductBottomBar extends StatelessWidget {
   const ProductBottomBar({
     required this.totalPrice,
     required this.onAddToCart,
+    this.enabled = true,
     super.key,
   });
 
   final double totalPrice;
   final VoidCallback onAddToCart;
+  final bool enabled;
 
   static const contentHeight = 56.0;
 
@@ -74,10 +76,11 @@ class ProductBottomBar extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     button: true,
+                    enabled: enabled,
                     label: 'Add to cart',
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: onAddToCart,
+                      onTap: enabled ? onAddToCart : null,
                       child: Container(
                         height: 44,
                         alignment: Alignment.center,

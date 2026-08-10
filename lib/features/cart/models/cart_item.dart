@@ -7,7 +7,7 @@ class CartItem {
     required this.size,
     required this.lid,
     required this.imageAsset,
-    required this.piecesPerPack,
+    this.piecesPerPack,
     required this.priceExVat,
     required this.quantity,
   });
@@ -19,7 +19,7 @@ class CartItem {
   final String size;
   final String lid;
   final String imageAsset;
-  final int piecesPerPack;
+  final int? piecesPerPack;
   final double priceExVat;
   final int quantity;
 

@@ -45,7 +45,9 @@ class CartState {
             variantId: variant.id,
             size: variant.size,
             lid: variant.lid,
-            imageAsset: variant.imageAsset ?? product.images.first,
+            imageAsset: variant.imageSource.isNotEmpty
+                ? variant.imageSource
+                : (product.images.isEmpty ? '' : product.images.first),
             piecesPerPack: variant.piecesPerPack,
             priceExVat: variant.priceExVat,
             quantity: quantity,

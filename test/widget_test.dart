@@ -9,6 +9,8 @@ import 'package:reborn_packaging/features/products/widgets/product_option_chip.d
 import 'package:reborn_packaging/features/products/data/mock_products.dart';
 import 'package:reborn_packaging/features/products/models/product_page.dart';
 import 'package:reborn_packaging/features/products/state/collection_products_provider.dart';
+import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
+import 'package:reborn_packaging/features/products/state/product_details_provider.dart';
 
 void main() {
   testWidgets('navigates from splash to the Home screen', (tester) async {
@@ -41,6 +43,11 @@ void main() {
               pagesFetched: 1,
             );
           }),
+          productDetailsProvider.overrideWith(
+            (ref, handle) async =>
+                mockProductDetailsForHandle(handle) ??
+                mockKraftRoundBowlsProduct,
+          ),
         ],
         child: const RebornPackagingApp(),
       ),
