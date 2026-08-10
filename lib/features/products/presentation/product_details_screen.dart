@@ -106,7 +106,10 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                               const SizedBox(height: 20),
                               const _SectionDivider(),
                               const SizedBox(height: 20),
-                              _ProductContent(product: product),
+                              _ProductContent(
+                                product: product,
+                                selectedVariant: _selectedVariant,
+                              ),
                             ],
                           ),
                         ),
@@ -378,17 +381,19 @@ class _ProductOptionGroup extends StatelessWidget {
 }
 
 class _ProductContent extends StatelessWidget {
-  const _ProductContent({required this.product});
+  const _ProductContent({required this.product, required this.selectedVariant});
 
   final ProductDetails product;
+  final ProductVariant selectedVariant;
 
   @override
   Widget build(BuildContext context) {
+    final specifications = product.specificationsForVariant(selectedVariant);
     final sections = <Widget>[
       if (product.description.isNotEmpty) _ProductDescription(product: product),
       if (product.features.isNotEmpty) _ProductFeatures(product: product),
-      if (product.specifications.isNotEmpty)
-        _ProductSpecifications(product: product),
+      if (specifications.isNotEmpty)
+        _ProductSpecifications(specifications: specifications),
     ];
 
     return Column(
@@ -486,9 +491,9 @@ class _ProductFeatures extends StatelessWidget {
 }
 
 class _ProductSpecifications extends StatelessWidget {
-  const _ProductSpecifications({required this.product});
+  const _ProductSpecifications({required this.specifications});
 
-  final ProductDetails product;
+  final List<ProductSpecification> specifications;
 
   @override
   Widget build(BuildContext context) {
@@ -500,10 +505,9 @@ class _ProductSpecifications extends StatelessWidget {
           style: AppTypography.sectionHeading,
         ),
         const SizedBox(height: 20),
-        for (var index = 0; index < product.specifications.length; index++) ...[
-          ProductSpecificationRow(specification: product.specifications[index]),
-          if (index < product.specifications.length - 1)
-            const SizedBox(height: 14),
+        for (var index = 0; index < specifications.length; index++) ...[
+          ProductSpecificationRow(specification: specifications[index]),
+          if (index < specifications.length - 1) const SizedBox(height: 14),
         ],
       ],
     );

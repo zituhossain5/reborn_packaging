@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:reborn_packaging/features/products/models/product_item.dart';
+import 'package:reborn_packaging/features/products/models/product_page.dart';
 import 'package:reborn_packaging/features/products/widgets/product_card.dart';
+import 'package:reborn_packaging/features/search/data/product_search_repository.dart';
 import 'package:reborn_packaging/features/search/presentation/search_screen.dart';
 
 void main() {
@@ -14,7 +17,14 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
-      ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      ProviderScope(
+        overrides: [
+          productSearchRepositoryProvider.overrideWithValue(
+            _FakeProductSearchRepository(),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
     );
     await tester.tap(find.text('Open search'));
     await tester.pumpAndSettle();
@@ -30,6 +40,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 299));
     expect(find.byType(ProductCard), findsNothing);
     await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
     expect(find.byType(ProductCard), findsNWidgets(2));
 
     await tester.tap(find.bySemanticsLabel('Clear search'));
@@ -42,6 +53,7 @@ void main() {
       'not-a-product',
     );
     await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
     expect(find.text('No products found'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('Clear search'));
@@ -58,7 +70,14 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
-      ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      ProviderScope(
+        overrides: [
+          productSearchRepositoryProvider.overrideWithValue(
+            _FakeProductSearchRepository(),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
     );
     await tester.tap(find.text('Open search'));
     await tester.pumpAndSettle();
@@ -67,6 +86,7 @@ void main() {
       'round',
     );
     await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
 
     await tester.tap(find.byType(ProductCard));
     await tester.pumpAndSettle();
@@ -103,6 +123,51 @@ GoRouter _testRouter() {
       ),
     ],
   );
+}
+
+class _FakeProductSearchRepository implements ProductSearchRepository {
+  @override
+  Future<ProductPage> searchPage({
+    required String query,
+    int first = 20,
+    String? after,
+  }) async {
+    final normalizedQuery = query.toLowerCase();
+    final results = [
+      if (normalizedQuery.contains('650'))
+        const ProductItem(
+          id: 'product-650-a',
+          handle: 'kraft-round-bowls',
+          collectionHandle: 'kraft-round-bowls',
+          collectionTitle: 'Kraft Round Bowls',
+          title: '650ml Kraft Round Bowls',
+          price: 41.95,
+        ),
+      if (normalizedQuery.contains('650'))
+        const ProductItem(
+          id: 'product-650-b',
+          handle: 'kraft-rectangular-bowls',
+          collectionHandle: 'kraft-rectangular-bowls',
+          collectionTitle: 'Kraft Rectangular Bowls',
+          title: '650ml Kraft Rectangular Bowls',
+          price: 42.95,
+        ),
+      if (normalizedQuery.contains('round'))
+        const ProductItem(
+          id: 'product-round',
+          handle: 'kraft-round-bowls',
+          collectionHandle: 'kraft-round-bowls',
+          collectionTitle: 'Kraft Round Bowls',
+          title: 'Kraft Round Bowls',
+          price: 41.95,
+        ),
+    ];
+
+    return ProductPage(
+      items: results,
+      pageInfo: const ProductPageInfo(hasNextPage: false, endCursor: null),
+    );
+  }
 }
 
 void _configureViewport(WidgetTester tester) {

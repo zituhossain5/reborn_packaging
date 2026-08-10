@@ -196,37 +196,92 @@ class _SearchBody extends ConsumerWidget {
       return const SizedBox.expand();
     }
 
+    if (search.isLoading) {
+      return const Center(
+        child: SizedBox.square(
+          dimension: 22,
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+
+    if (search.hasError && search.results.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                search.errorMessage!,
+                textAlign: TextAlign.center,
+                style: AppTypography.searchNoResults,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextButton(
+                onPressed: ref.read(searchControllerProvider.notifier).retry,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (search.results.isEmpty) {
       return const Center(
         child: Text('No products found', style: AppTypography.searchNoResults),
       );
     }
 
-    return GridView.builder(
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: search.results.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: AppSpacing.sm,
-        mainAxisSpacing: AppSpacing.sm,
-        mainAxisExtent: ProductCard.height,
-      ),
-      itemBuilder: (context, index) {
-        final product = search.results[index];
-        return ProductCard(
-          product: product,
-          onTap: () {
-            FocusScope.of(context).unfocus();
-            context.push('/products/${product.handle}');
-          },
-          onAddToCart: () => _addToCartOrOpenDetails(
-            context: context,
-            ref: ref,
-            product: product,
-          ),
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.extentAfter < ProductCard.height) {
+          ref.read(searchControllerProvider.notifier).loadMore();
+        }
+        return false;
       },
+      child: GridView.builder(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        itemCount: search.results.length + (search.isLoadingMore ? 1 : 0),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: AppSpacing.sm,
+          mainAxisSpacing: AppSpacing.sm,
+          mainAxisExtent: ProductCard.height,
+        ),
+        itemBuilder: (context, index) {
+          if (index >= search.results.length) {
+            return const Center(
+              child: SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2,
+                ),
+              ),
+            );
+          }
+
+          final product = search.results[index];
+          return ProductCard(
+            product: product,
+            onTap: () {
+              FocusScope.of(context).unfocus();
+              context.push('/products/${product.handle}');
+            },
+            onAddToCart: () => _addToCartOrOpenDetails(
+              context: context,
+              ref: ref,
+              product: product,
+            ),
+          );
+        },
+      ),
     );
   }
 

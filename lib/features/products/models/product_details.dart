@@ -44,6 +44,24 @@ class ProductDetails {
   ProductVariant get selectedVariant {
     return variants.firstWhere((variant) => variant.id == selectedVariantId);
   }
+
+  List<ProductSpecification> specificationsForVariant(ProductVariant variant) {
+    final baseSpecifications = specifications
+        .where((specification) => !_isSkuSpecification(specification.label))
+        .toList(growable: false);
+    final sku = variant.sku?.trim();
+
+    if (sku == null || sku.isEmpty) return baseSpecifications;
+
+    return [
+      ProductSpecification(label: 'SKU', value: sku),
+      ...baseSpecifications,
+    ];
+  }
+
+  static bool _isSkuSpecification(String label) {
+    return label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '') == 'sku';
+  }
 }
 
 class ProductVariant {
