@@ -1,154 +1,409 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/shopify_failure.dart';
 import '../../products/models/product_details.dart';
+import '../data/cart_id_store.dart';
+import '../data/shopify_cart_repository.dart';
 import '../models/cart_item.dart';
+import '../models/shopify_cart.dart';
 
 final cartControllerProvider = NotifierProvider<CartController, CartState>(
   CartController.new,
 );
 
-final cartTotalQuantityProvider = Provider<int>((ref) {
-  return ref.watch(
-    cartControllerProvider.select((state) => state.totalQuantity),
-  );
-});
+final cartTotalQuantityProvider = Provider<int>(
+  (ref) =>
+      ref.watch(cartControllerProvider.select((state) => state.totalQuantity)),
+);
 
 class CartState {
-  const CartState({this.items = const [], this.discountAmount = 0});
+  const CartState({
+    this.cart,
+    this.isRestoring = false,
+    this.isMutating = false,
+    this.errorMessage,
+  });
 
-  final List<CartItem> items;
-  final double discountAmount;
+  final ShopifyCart? cart;
+  final bool isRestoring;
+  final bool isMutating;
+  final String? errorMessage;
 
-  int get totalQuantity {
-    return items.fold(0, (total, item) => total + item.quantity);
-  }
-
+  List<CartItem> get items => cart?.lines ?? const [];
+  int get totalQuantity => cart?.totalQuantity ?? 0;
   int get itemCount => items.length;
+  double get discountAmount => 0;
 
-  CartState addVariant({
-    required ProductDetails product,
-    required ProductVariant variant,
-    required int quantity,
+  CartState copyWith({
+    Object? cart = _unchanged,
+    bool? isRestoring,
+    bool? isMutating,
+    Object? errorMessage = _unchanged,
   }) {
-    final existingIndex = items.indexWhere(
-      (item) => item.variantId == variant.id,
-    );
-
-    if (existingIndex == -1) {
-      return CartState(
-        items: [
-          ...items,
-          CartItem(
-            productId: product.id,
-            productHandle: product.handle,
-            productTitle: _cartTitle(product.title, variant.size),
-            variantId: variant.id,
-            size: variant.size,
-            lid: variant.lid,
-            imageAsset: variant.imageSource.isNotEmpty
-                ? variant.imageSource
-                : (product.images.isEmpty ? '' : product.images.first),
-            piecesPerPack: variant.piecesPerPack,
-            priceExVat: variant.priceExVat,
-            quantity: quantity,
-          ),
-        ],
-        discountAmount: discountAmount,
-      );
-    }
-
-    final updatedItems = [...items];
-    final existingItem = updatedItems[existingIndex];
-    updatedItems[existingIndex] = existingItem.copyWith(
-      quantity: existingItem.quantity + quantity,
-    );
-
-    return CartState(items: updatedItems, discountAmount: discountAmount);
-  }
-
-  CartState increaseQuantity(String variantId) {
-    return _updateQuantity(variantId, (quantity) => quantity + 1);
-  }
-
-  CartState decreaseQuantity(String variantId) {
-    return _updateQuantity(
-      variantId,
-      (quantity) => quantity > 1 ? quantity - 1 : 1,
-    );
-  }
-
-  CartState removeVariant(String variantId) {
     return CartState(
-      items: items.where((item) => item.variantId != variantId).toList(),
-      discountAmount: discountAmount,
+      cart: identical(cart, _unchanged) ? this.cart : cart as ShopifyCart?,
+      isRestoring: isRestoring ?? this.isRestoring,
+      isMutating: isMutating ?? this.isMutating,
+      errorMessage: identical(errorMessage, _unchanged)
+          ? this.errorMessage
+          : errorMessage as String?,
     );
   }
 
-  CartState applyDiscount(double amount) {
-    return CartState(items: items, discountAmount: amount);
-  }
-
-  CartState _updateQuantity(
-    String variantId,
-    int Function(int quantity) update,
-  ) {
-    return CartState(
-      items: [
-        for (final item in items)
-          if (item.variantId == variantId)
-            item.copyWith(quantity: update(item.quantity))
-          else
-            item,
-      ],
-      discountAmount: discountAmount,
-    );
-  }
-
-  static String _cartTitle(String productTitle, String size) {
-    if (productTitle.toLowerCase().startsWith(size.toLowerCase())) {
-      return productTitle;
-    }
-    return '$size $productTitle';
-  }
+  static const _unchanged = Object();
 }
 
 class CartController extends Notifier<CartState> {
+  late final CartRepository _repository;
+  late final CartIdStore _idStore;
+
   @override
   CartState build() {
-    return const CartState();
+    _repository = ref.watch(cartRepositoryProvider);
+    _idStore = ref.watch(cartIdStoreProvider);
+    Future.microtask(restore);
+    return const CartState(isRestoring: true);
   }
 
-  void addVariant({
+  Future<void> restore() async {
+    state = state.copyWith(isRestoring: true, errorMessage: null);
+    try {
+      final savedId = await _idStore.read();
+      if (savedId == null || savedId.isEmpty) {
+        state = const CartState();
+        return;
+      }
+      final cart = await _repository.fetchCart(savedId);
+      if (cart == null) {
+        await _idStore.clear();
+        state = const CartState();
+        return;
+      }
+      state = CartState(cart: cart);
+    } on ShopifyFailure catch (failure) {
+      state = CartState(errorMessage: failure.message);
+    } catch (_) {
+      state = const CartState(errorMessage: 'Unable to restore your cart.');
+    }
+  }
+
+  Future<bool> addVariant({
     required ProductDetails product,
     required ProductVariant variant,
     required int quantity,
-  }) {
-    if (quantity <= 0) {
-      return;
-    }
-
-    state = state.addVariant(
+  }) async {
+    final validationFailure = _validateVariant(
       product: product,
       variant: variant,
       quantity: quantity,
     );
+    _debugVariantSelection(
+      product: product,
+      variant: variant,
+      quantity: quantity,
+      validationFailure: validationFailure,
+    );
+    if (validationFailure != null) {
+      _setFailure(validationFailure);
+      return false;
+    }
+    return addMerchandise(merchandiseId: variant.id, quantity: quantity);
   }
 
-  void increaseQuantity(String variantId) {
-    state = state.increaseQuantity(variantId);
+  Future<bool> addMerchandise({
+    required String merchandiseId,
+    required int quantity,
+  }) async {
+    if (quantity <= 0 || state.isMutating) return false;
+    state = state.copyWith(isMutating: true, errorMessage: null);
+    final existingCart = state.cart;
+    final previousQuantity = existingCart?.totalQuantity ?? 0;
+    try {
+      final cart = existingCart == null
+          ? await _repository.createCart(
+              merchandiseId: merchandiseId,
+              quantity: quantity,
+            )
+          : await _repository.addLine(
+              cartId: existingCart.id,
+              merchandiseId: merchandiseId,
+              quantity: quantity,
+            );
+      await _accept(cart);
+      if (cart.warnings.isNotEmpty) {
+        _debugShopifyWarnings(cart.warnings);
+        final message = cart.warnings
+            .map((warning) => warning.message)
+            .join('; ');
+        state = state.copyWith(errorMessage: message);
+        return cart.totalQuantity > previousQuantity;
+      }
+      return true;
+    } on ShopifyUserFailure catch (failure) {
+      _debugShopifyFailure(failure);
+      if (existingCart != null && failure.indicatesInvalidCart) {
+        return _recreateCart(merchandiseId, quantity);
+      }
+      _setFailure(failure.message);
+      return false;
+    } on ShopifyFailure catch (failure) {
+      _debugShopifyFailure(failure);
+      _setFailure(failure.message);
+      return false;
+    } catch (error, stackTrace) {
+      _setUnexpectedFailure(
+        action: 'add this product to your cart',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
-  void decreaseQuantity(String variantId) {
-    state = state.decreaseQuantity(variantId);
+  Future<bool> increaseQuantity(String lineId) async {
+    final line = _line(lineId);
+    if (line == null) return false;
+    final next = line.quantity + line.quantityRule.increment;
+    final maximum = line.quantityRule.maximum;
+    if (maximum != null && next > maximum) return false;
+    return _updateQuantity(line, next);
   }
 
-  void removeVariant(String variantId) {
-    state = state.removeVariant(variantId);
+  Future<bool> decreaseQuantity(String lineId) async {
+    final line = _line(lineId);
+    if (line == null) return false;
+    final next = line.quantity - line.quantityRule.increment;
+    if (next < line.quantityRule.minimum) return false;
+    return _updateQuantity(line, next);
   }
 
-  void setDiscount(double amount) {
-    state = state.applyDiscount(amount < 0 ? 0 : amount);
+  Future<bool> removeLine(String lineId) async {
+    final cart = state.cart;
+    if (cart == null || state.isMutating) return false;
+    state = state.copyWith(isMutating: true, errorMessage: null);
+    try {
+      await _accept(
+        await _repository.removeLine(cartId: cart.id, lineId: lineId),
+      );
+      return true;
+    } on ShopifyFailure catch (failure) {
+      await _handleMutationFailure(failure);
+      return false;
+    } catch (error, stackTrace) {
+      _setUnexpectedFailure(
+        action: 'remove this item',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
-  void clear() => state = const CartState();
+  Future<bool> applyDiscountCode(String code) async {
+    final cart = state.cart;
+    if (cart == null || state.isMutating) return false;
+    state = state.copyWith(isMutating: true, errorMessage: null);
+    try {
+      final normalized = code.trim();
+      await _accept(
+        await _repository.updateDiscountCodes(
+          cartId: cart.id,
+          discountCodes: normalized.isEmpty ? const [] : [normalized],
+        ),
+      );
+      return state.cart?.discountCodes.every(
+            (discount) => discount.applicable,
+          ) ??
+          false;
+    } on ShopifyFailure catch (failure) {
+      await _handleMutationFailure(failure);
+      return false;
+    } catch (error, stackTrace) {
+      _setUnexpectedFailure(
+        action: 'apply the discount code',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  Future<void> clear() async {
+    state = const CartState();
+    await _idStore.clear();
+  }
+
+  Future<bool> _updateQuantity(CartLine line, int quantity) async {
+    final cart = state.cart;
+    if (cart == null || state.isMutating) return false;
+    state = state.copyWith(isMutating: true, errorMessage: null);
+    try {
+      await _accept(
+        await _repository.updateLine(
+          cartId: cart.id,
+          lineId: line.id,
+          quantity: quantity,
+        ),
+      );
+      return true;
+    } on ShopifyFailure catch (failure) {
+      await _handleMutationFailure(failure);
+      return false;
+    } catch (error, stackTrace) {
+      _setUnexpectedFailure(
+        action: 'update this quantity',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  Future<bool> _recreateCart(String merchandiseId, int quantity) async {
+    await _idStore.clear();
+    state = const CartState(isMutating: true);
+    try {
+      await _accept(
+        await _repository.createCart(
+          merchandiseId: merchandiseId,
+          quantity: quantity,
+        ),
+      );
+      return true;
+    } on ShopifyFailure catch (failure) {
+      _setFailure(failure.message);
+      return false;
+    }
+  }
+
+  Future<void> _accept(ShopifyCart cart) async {
+    await _idStore.save(cart.id);
+    state = CartState(cart: cart);
+  }
+
+  Future<void> _handleMutationFailure(ShopifyFailure failure) async {
+    if (failure is ShopifyUserFailure && failure.indicatesInvalidCart) {
+      await _idStore.clear();
+      state = const CartState(
+        errorMessage:
+            'Your previous cart expired. Add an item to start a new cart.',
+      );
+      return;
+    }
+    _setFailure(failure.message);
+  }
+
+  CartLine? _line(String lineId) {
+    for (final line in state.items) {
+      if (line.id == lineId) return line;
+    }
+    return null;
+  }
+
+  void _setFailure(String message) {
+    state = state.copyWith(
+      isRestoring: false,
+      isMutating: false,
+      errorMessage: message,
+    );
+  }
+
+  String? _validateVariant({
+    required ProductDetails product,
+    required ProductVariant variant,
+    required int quantity,
+  }) {
+    if (!product.variants.any((candidate) => candidate.id == variant.id)) {
+      return 'The selected product variant is no longer available.';
+    }
+    if (product.id.startsWith('gid://shopify/Product/') &&
+        !variant.id.startsWith('gid://shopify/ProductVariant/')) {
+      return 'The selected Shopify product variant is invalid.';
+    }
+    if (!variant.availableForSale) {
+      return 'This product variant is currently unavailable.';
+    }
+    final rule = variant.quantityRule;
+    if (quantity < rule.minimum) {
+      return 'The minimum quantity for this variant is ${rule.minimum}.';
+    }
+    if (rule.maximum != null && quantity > rule.maximum!) {
+      return 'The maximum quantity for this variant is ${rule.maximum}.';
+    }
+    if ((quantity - rule.minimum) % rule.increment != 0) {
+      return 'Quantity must increase in steps of ${rule.increment}.';
+    }
+    final available = variant.quantityAvailable;
+    if (available != null && quantity > available) {
+      return 'Only $available of this variant are currently available.';
+    }
+    return null;
+  }
+
+  void _debugVariantSelection({
+    required ProductDetails product,
+    required ProductVariant variant,
+    required int quantity,
+    required String? validationFailure,
+  }) {
+    if (!kDebugMode) return;
+    debugPrint(
+      'Shopify add-to-cart selection: '
+      'handle=${product.handle}, '
+      'variantId=${variant.id}, '
+      'variantTitle=${variant.title}, '
+      'availableForSale=${variant.availableForSale}, '
+      'quantityAvailable=${variant.quantityAvailable}, '
+      'minimum=${variant.quantityRule.minimum}, '
+      'maximum=${variant.quantityRule.maximum}, '
+      'increment=${variant.quantityRule.increment}, '
+      'selectedQuantity=$quantity, '
+      'validation=${validationFailure ?? 'passed'}',
+    );
+  }
+
+  void _setUnexpectedFailure({
+    required String action,
+    required Object error,
+    required StackTrace stackTrace,
+  }) {
+    final safeError = _redactCartIds(error.toString());
+    if (kDebugMode) {
+      debugPrint('Unexpected Shopify cart error: $safeError');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+    _setFailure(
+      safeError.isEmpty
+          ? 'Unable to $action.'
+          : 'Unable to $action: $safeError',
+    );
+  }
+
+  String _redactCartIds(String value) {
+    return value.replaceAll(
+      RegExp(r'''gid://shopify/Cart/[^\s"']+'''),
+      '[redacted Shopify cart ID]',
+    );
+  }
+
+  void _debugShopifyFailure(ShopifyFailure failure) {
+    if (!kDebugMode) return;
+    debugPrint(
+      'Shopify cart failure (${failure.runtimeType}): '
+      '${_redactCartIds(failure.message)}',
+    );
+  }
+
+  void _debugShopifyWarnings(List<ShopifyCartWarning> warnings) {
+    if (!kDebugMode) return;
+    for (final warning in warnings) {
+      debugPrint(
+        'Shopify cart warning: code=${warning.code}, '
+        'target=${warning.target}, message=${warning.message}',
+      );
+    }
+  }
 }

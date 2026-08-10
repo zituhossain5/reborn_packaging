@@ -41,6 +41,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cart = ref.watch(cartControllerProvider);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -53,7 +54,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         backgroundColor: AppColors.backgroundLight,
         bottomNavigationBar: ProductBottomBar(
           totalPrice: _selection.totalPrice,
-          enabled: _selectedVariant.isAvailable,
+          enabled: _selectedVariant.isAvailable && !cart.isMutating,
           onAddToCart: _addToCart,
         ),
         body: SafeArea(
@@ -132,7 +133,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
   Widget _variantSelectors() {
     final options = product.options.isNotEmpty
-        ? product.options
+        ? product.selectableOptions
         : [
             ProductOption(id: 'size', name: 'Size', values: product.sizes),
             ProductOption(id: 'lid', name: 'Lid', values: product.lidOptions),
@@ -216,14 +217,22 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     setState(_selection.toggleIncludeVat);
   }
 
-  void _addToCart() {
-    ref
+  Future<void> _addToCart() async {
+    final added = await ref
         .read(cartControllerProvider.notifier)
         .addVariant(
           product: product,
           variant: _selectedVariant,
           quantity: _selection.quantity,
         );
+    if (!added && mounted) {
+      final message = ref.read(cartControllerProvider).errorMessage;
+      if (message != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
   }
 }
 

@@ -285,16 +285,17 @@ class _SearchBody extends ConsumerWidget {
     );
   }
 
-  void _addToCartOrOpenDetails({
+  Future<void> _addToCartOrOpenDetails({
     required BuildContext context,
     required WidgetRef ref,
     required ProductItem product,
-  }) {
-    final added = addProductItemDefaultVariantToCart(
+  }) async {
+    final added = await addProductItemDefaultVariantToCart(
       ref: ref,
       product: product,
     );
 
+    if (!context.mounted) return;
     if (!added) {
       FocusScope.of(context).unfocus();
       context.push('/products/${product.handle}');

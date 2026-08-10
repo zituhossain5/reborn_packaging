@@ -41,6 +41,19 @@ class ProductDetails {
   final List<ProductImage> imageItems;
   final List<ProductOption> options;
 
+  List<ProductOption> get selectableOptions {
+    if (variants.length == 1 && options.length == 1) {
+      final option = options.single;
+      final values = option.values;
+      if (option.name.toLowerCase() == 'title' &&
+          values.length == 1 &&
+          values.single.toLowerCase() == 'default title') {
+        return const [];
+      }
+    }
+    return options;
+  }
+
   ProductVariant get selectedVariant {
     return variants.firstWhere((variant) => variant.id == selectedVariantId);
   }

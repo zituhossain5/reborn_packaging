@@ -32,6 +32,11 @@ class ShopifyCollectionProductsRepository {
                 currencyCode
               }
             }
+            selectedOrFirstAvailableVariant {
+              id
+              title
+              availableForSale
+            }
             variants(first: 20) {
               nodes {
                 id
@@ -174,6 +179,7 @@ class ShopifyCollectionProductsRepository {
     final rawVariants = variantsConnection is Map<String, dynamic>
         ? variantsConnection['nodes']
         : null;
+    final quickAddVariant = json['selectedOrFirstAvailableVariant'];
 
     return ProductItem(
       id: json['id'] as String? ?? '',
@@ -186,6 +192,15 @@ class ShopifyCollectionProductsRepository {
       currencyCode: minimumPrice['currencyCode'] as String? ?? '',
       imageUrl: image?['url'] as String?,
       imageAltText: image?['altText'] as String?,
+      quickAddVariantId: quickAddVariant is Map<String, dynamic>
+          ? quickAddVariant['id'] as String?
+          : null,
+      quickAddVariantTitle: quickAddVariant is Map<String, dynamic>
+          ? quickAddVariant['title'] as String?
+          : null,
+      quickAddVariantAvailableForSale: quickAddVariant is Map<String, dynamic>
+          ? quickAddVariant['availableForSale'] as bool?
+          : null,
       variants: rawVariants is List
           ? rawVariants
                 .whereType<Map<String, dynamic>>()

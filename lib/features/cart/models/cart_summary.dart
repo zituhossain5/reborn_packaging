@@ -1,5 +1,6 @@
 import '../../../core/config/cart_pricing_config.dart';
 import 'cart_item.dart';
+import 'shopify_cart.dart';
 
 class CartSummary {
   CartSummary._({
@@ -8,6 +9,8 @@ class CartSummary {
     required this.shipping,
     required this.estimatedTaxes,
     required this.total,
+    this.shippingAvailable = true,
+    this.estimatedTaxesAvailable = true,
   });
 
   factory CartSummary.calculate({
@@ -36,11 +39,26 @@ class CartSummary {
     );
   }
 
+  factory CartSummary.fromShopifyCart(ShopifyCart cart) {
+    final subtotal = _money(cart.cost.subtotalAmount.amount);
+    return CartSummary._(
+      subtotal: subtotal,
+      discount: 0,
+      shipping: 0,
+      estimatedTaxes: _money(cart.cost.totalTaxAmount?.amount ?? 0),
+      total: _money(cart.cost.totalAmount.amount),
+      shippingAvailable: false,
+      estimatedTaxesAvailable: cart.cost.totalTaxAmount != null,
+    );
+  }
+
   final double subtotal;
   final double discount;
   final double shipping;
   final double estimatedTaxes;
   final double total;
+  final bool shippingAvailable;
+  final bool estimatedTaxesAvailable;
 
   double get freeShippingRemaining => _money(
     (CartPricingConfig.freeShippingThreshold - subtotal).clamp(

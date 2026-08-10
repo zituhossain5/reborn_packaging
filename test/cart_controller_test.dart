@@ -1,112 +1,102 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:reborn_packaging/features/cart/data/cart_id_store.dart';
+import 'package:reborn_packaging/features/cart/data/shopify_cart_repository.dart';
 import 'package:reborn_packaging/features/cart/state/cart_controller.dart';
-import 'package:reborn_packaging/features/cart/models/cart_item.dart';
-import 'package:reborn_packaging/features/cart/models/cart_summary.dart';
 import 'package:reborn_packaging/features/cart/widgets/cart_quantity_badge.dart';
 import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
 
+import 'support/fake_cart.dart';
+
 void main() {
   test(
-    'cart state merges matching variants and combines different variants',
-    () {
+    'Shopify cart creates lazily, merges variants, updates and removes lines',
+    () async {
+      final repository = FakeCartRepository();
+      final idStore = MemoryCartIdStore();
+      final container = ProviderContainer(
+        overrides: [
+          cartRepositoryProvider.overrideWithValue(repository),
+          cartIdStoreProvider.overrideWithValue(idStore),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(cartControllerProvider.notifier);
       final product = mockKraftRoundBowlsProduct;
-      final firstVariant = product.selectedVariant;
-      final secondVariant = product.variants.firstWhere(
-        (variant) => variant.id != firstVariant.id && variant.isAvailable,
+      final first = product.selectedVariant;
+      final second = product.variants.firstWhere(
+        (variant) => variant.id != first.id && variant.isAvailable,
       );
 
-      final state = const CartState()
-          .addVariant(product: product, variant: firstVariant, quantity: 1)
-          .addVariant(product: product, variant: firstVariant, quantity: 1)
-          .addVariant(product: product, variant: firstVariant, quantity: 3)
-          .addVariant(product: product, variant: secondVariant, quantity: 2);
+      expect(
+        await controller.addVariant(
+          product: product,
+          variant: first,
+          quantity: 1,
+        ),
+        isTrue,
+      );
+      expect(
+        await controller.addVariant(
+          product: product,
+          variant: first,
+          quantity: 2,
+        ),
+        isTrue,
+      );
+      expect(
+        await controller.addVariant(
+          product: product,
+          variant: second,
+          quantity: 1,
+        ),
+        isTrue,
+      );
+      expect(repository.createCalls, 1);
+      expect(repository.addCalls, 2);
+      expect(container.read(cartControllerProvider).totalQuantity, 4);
+      expect(container.read(cartControllerProvider).items, hasLength(2));
+      expect(idStore.value, contains('?key='));
 
-      expect(state.items, hasLength(2));
-      expect(state.items.first.quantity, 5);
-      expect(state.items.last.quantity, 2);
-      expect(state.totalQuantity, 7);
-      expect(state.items.first.productTitle, '500ml Kraft Round Bowls');
-      expect(state.items.first.piecesPerPack, 600);
-      expect(state.items.first.priceExVat, 54.95);
+      final firstLine = container.read(cartControllerProvider).items.first;
+      await controller.increaseQuantity(firstLine.lineId);
+      expect(repository.updateCalls, 1);
+      await controller.removeLine(firstLine.lineId);
+      expect(repository.removeCalls, 1);
+      expect(container.read(cartControllerProvider).items, hasLength(1));
     },
   );
 
-  test('cart quantities respect one and removal updates totals', () {
-    final product = mockKraftRoundBowlsProduct;
-    final variant = product.selectedVariant;
-    final added = const CartState().addVariant(
-      product: product,
-      variant: variant,
-      quantity: 1,
+  test('saved full cart ID restores Shopify state', () async {
+    final repository = FakeCartRepository();
+    final created = await repository.createCart(
+      merchandiseId: mockKraftRoundBowlsProduct.selectedVariant.id,
+      quantity: 3,
     );
-
-    final unchanged = added.decreaseQuantity(variant.id);
-    final increased = unchanged.increaseQuantity(variant.id);
-    final removed = increased.removeVariant(variant.id);
-
-    expect(unchanged.items.single.quantity, 1);
-    expect(increased.items.single.quantity, 2);
-    expect(increased.totalQuantity, 2);
-    expect(removed.items, isEmpty);
-    expect(removed.totalQuantity, 0);
-  });
-
-  test('cart summary calculates shipping threshold and reactive totals', () {
-    const firstItem = CartItem(
-      productId: 'one',
-      productHandle: 'one',
-      productTitle: 'First',
-      variantId: 'one',
-      size: '500ml',
-      lid: 'Without Lid',
-      imageAsset: 'first.png',
-      piecesPerPack: 600,
-      priceExVat: 41.95,
-      quantity: 1,
+    final idStore = MemoryCartIdStore()..value = created.id;
+    final container = ProviderContainer(
+      overrides: [
+        cartRepositoryProvider.overrideWithValue(repository),
+        cartIdStoreProvider.overrideWithValue(idStore),
+      ],
     );
-    const secondItem = CartItem(
-      productId: 'two',
-      productHandle: 'two',
-      productTitle: 'Second',
-      variantId: 'two',
-      size: 'Large',
-      lid: 'Without Lid',
-      imageAsset: 'second.png',
-      piecesPerPack: 600,
-      priceExVat: 25.99,
-      quantity: 1,
-    );
+    addTearDown(container.dispose);
 
-    final belowThreshold = CartSummary.calculate(
-      items: const [firstItem, secondItem],
-    );
-    final aboveThreshold = CartSummary.calculate(
-      items: [firstItem, secondItem.copyWith(quantity: 3)],
-      requestedDiscount: 8,
-    );
-
-    expect(belowThreshold.subtotal, 67.94);
-    expect(belowThreshold.freeShippingRemaining, 32.06);
-    expect(belowThreshold.freeShippingProgress, closeTo(0.6794, 0.0001));
-    expect(belowThreshold.showsFreeShippingProgress, isTrue);
-    expect(aboveThreshold.subtotal, 119.92);
-    expect(aboveThreshold.discount, 8);
-    expect(aboveThreshold.shipping, 0);
-    expect(aboveThreshold.showsFreeShippingProgress, isFalse);
+    container.read(cartControllerProvider);
+    await container.read(cartControllerProvider.notifier).restore();
+    expect(container.read(cartControllerProvider).totalQuantity, 3);
+    expect(idStore.value, created.id);
   });
 
   testWidgets('cart badge hides zero and caps large totals', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: CartQuantityBadge(quantity: 0)),
     );
-
     expect(find.byKey(const ValueKey('cart_quantity_badge')), findsNothing);
-
     await tester.pumpWidget(
       const MaterialApp(home: CartQuantityBadge(quantity: 100)),
     );
-
     expect(find.byKey(const ValueKey('cart_quantity_badge')), findsOneWidget);
     expect(find.text('99+'), findsOneWidget);
   });

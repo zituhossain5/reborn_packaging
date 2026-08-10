@@ -13,6 +13,9 @@ class ProductItem {
     this.imageUrl,
     this.imageAltText,
     this.availableForSale = true,
+    this.quickAddVariantId,
+    this.quickAddVariantTitle,
+    this.quickAddVariantAvailableForSale,
     this.variants = const [],
     this.variantSizes = const [],
     this.searchKeywords = const [],
@@ -31,6 +34,9 @@ class ProductItem {
   final String? imageUrl;
   final String? imageAltText;
   final bool availableForSale;
+  final String? quickAddVariantId;
+  final String? quickAddVariantTitle;
+  final bool? quickAddVariantAvailableForSale;
   final List<ProductVariantItem> variants;
   final List<String> variantSizes;
   final List<String> searchKeywords;

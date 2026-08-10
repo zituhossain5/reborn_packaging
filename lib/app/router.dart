@@ -19,9 +19,11 @@ abstract final class AppRoutes {
   static const productDetails = '/products/:handle';
   static const cart = '/cart';
   static const search = '/search';
-  static const checkout = '/checkout';
-  static const checkoutPayment = '/checkout/payment';
-  static const checkoutConfirmation = '/checkout/confirmation';
+  // Design-only mock routes. Production Cart checkout opens Shopify's
+  // checkoutUrl in the platform browser and does not navigate to these routes.
+  static const mockCheckoutDelivery = '/checkout';
+  static const mockCheckoutPayment = '/checkout/payment';
+  static const mockCheckoutConfirmation = '/checkout/confirmation';
   static const login = '/login';
   static const account = '/account';
 }
@@ -65,15 +67,15 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SearchScreen(),
     ),
     GoRoute(
-      path: AppRoutes.checkout,
+      path: AppRoutes.mockCheckoutDelivery,
       builder: (context, state) => const CheckoutScreen(),
     ),
     GoRoute(
-      path: AppRoutes.checkoutPayment,
+      path: AppRoutes.mockCheckoutPayment,
       builder: (context, state) => const PaymentScreen(),
     ),
     GoRoute(
-      path: AppRoutes.checkoutConfirmation,
+      path: AppRoutes.mockCheckoutConfirmation,
       builder: (context, state) => const OrderConfirmationScreen(),
     ),
     GoRoute(

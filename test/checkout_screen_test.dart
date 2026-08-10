@@ -7,28 +7,40 @@ import 'package:reborn_packaging/features/cart/state/cart_controller.dart';
 import 'package:reborn_packaging/features/checkout/presentation/checkout_screen.dart';
 import 'package:reborn_packaging/features/checkout/presentation/payment_screen.dart';
 import 'package:reborn_packaging/features/checkout/presentation/order_confirmation_screen.dart';
+import 'package:reborn_packaging/features/checkout/services/shopify_checkout_launcher.dart';
 import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
+import 'package:reborn_packaging/features/cart/data/cart_id_store.dart';
+import 'package:reborn_packaging/features/cart/data/shopify_cart_repository.dart';
+
+import 'support/fake_cart.dart';
 
 void main() {
-  testWidgets('cart opens checkout and back returns to cart', (tester) async {
+  testWidgets('cart opens Shopify checkout URL without mock navigation', (
+    tester,
+  ) async {
     _configureViewport(tester);
     final router = _router();
+    final checkoutLauncher = _FakeShopifyCheckoutLauncher();
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
-      ProviderScope(child: _SeededCheckoutApp(router: router)),
+      ProviderScope(
+        overrides: [
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+          shopifyCheckoutLauncherProvider.overrideWithValue(checkoutLauncher),
+        ],
+        child: _SeededCheckoutApp(router: router),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Proceed to checkout'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Checkout'), findsOneWidget);
-    expect(find.text('DELIVERY'), findsOneWidget);
-    expect(find.text('Order summary (1 item)'), findsOneWidget);
-
-    await tester.tap(find.bySemanticsLabel('Back'));
-    await tester.pumpAndSettle();
     expect(find.text('My Cart'), findsOneWidget);
+    expect(find.text('Checkout'), findsNothing);
+    expect(checkoutLauncher.openCalls, 1);
+    expect(checkoutLauncher.lastCheckoutUrl, 'https://example.test/checkout');
     expect(tester.takeException(), isNull);
   });
 
@@ -40,7 +52,13 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
-      ProviderScope(child: _SeededCheckoutApp(router: router)),
+      ProviderScope(
+        overrides: [
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+        ],
+        child: _SeededCheckoutApp(router: router),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -112,6 +130,18 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+}
+
+class _FakeShopifyCheckoutLauncher implements ShopifyCheckoutLauncher {
+  int openCalls = 0;
+  String? lastCheckoutUrl;
+
+  @override
+  Future<bool> open(String checkoutUrl) async {
+    openCalls++;
+    lastCheckoutUrl = checkoutUrl;
+    return true;
+  }
 }
 
 class _SeededCheckoutApp extends ConsumerStatefulWidget {

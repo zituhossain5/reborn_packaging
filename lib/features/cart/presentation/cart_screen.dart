@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/config/cart_pricing_config.dart';
 import '../../../core/formatters/money_formatter.dart';
+import '../../checkout/services/shopify_checkout_launcher.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
 import '../models/cart_item.dart';
 import '../models/cart_summary.dart';
@@ -22,25 +22,39 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final _noteController = TextEditingController();
   final _discountController = TextEditingController();
   bool _noteIsExpanded = false;
+  bool _checkoutIsOpening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _noteController.dispose();
     _discountController.dispose();
     super.dispose();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(cartControllerProvider.notifier).restore();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartControllerProvider);
-    final summary = CartSummary.calculate(
-      items: cart.items,
-      requestedDiscount: cart.discountAmount,
-    );
+    final summary = cart.cart == null
+        ? CartSummary.calculate(items: const [])
+        : CartSummary.fromShopifyCart(cart.cart!);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -55,7 +69,9 @@ class _CartScreenState extends ConsumerState<CartScreen>
         bottomNavigationBar: _CartBottomArea(
           hasItems: cart.items.isNotEmpty,
           total: summary.total,
-          onCheckout: () => context.push('/checkout'),
+          onCheckout: cart.isRestoring || cart.isMutating || _checkoutIsOpening
+              ? null
+              : _openShopifyCheckout,
         ),
         body: SafeArea(
           bottom: false,
@@ -63,7 +79,20 @@ class _CartScreenState extends ConsumerState<CartScreen>
             children: [
               _CartHeader(itemCount: cart.itemCount),
               Expanded(
-                child: cart.items.isEmpty
+                child: cart.isRestoring
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : cart.errorMessage != null && cart.items.isEmpty
+                    ? _CartError(
+                        message: cart.errorMessage!,
+                        onRetry: () =>
+                            ref.read(cartControllerProvider.notifier).restore(),
+                      )
+                    : cart.items.isEmpty
                     ? const _EmptyCart()
                     : ListView(
                         padding: const EdgeInsets.fromLTRB(
@@ -73,7 +102,17 @@ class _CartScreenState extends ConsumerState<CartScreen>
                           AppSpacing.md,
                         ),
                         children: [
-                          _CartItems(items: cart.items),
+                          if (cart.errorMessage != null) ...[
+                            Text(
+                              cart.errorMessage!,
+                              style: AppTypography.cartShippingMessage,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
+                          _CartItems(
+                            items: cart.items,
+                            mutationPending: cart.isMutating,
+                          ),
                           if (summary.showsFreeShippingProgress) ...[
                             const SizedBox(height: AppSpacing.md),
                             _FreeShippingCard(summary: summary),
@@ -91,7 +130,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
                           const SizedBox(height: AppSpacing.md),
                           _DiscountCard(
                             controller: _discountController,
-                            onApply: _applyDiscount,
+                            onApply: cart.isMutating ? null : _applyDiscount,
                           ),
                         ],
                       ),
@@ -103,15 +142,92 @@ class _CartScreenState extends ConsumerState<CartScreen>
     );
   }
 
-  void _applyDiscount() {
+  Future<void> _applyDiscount() async {
     FocusScope.of(context).unfocus();
-    ref
+    final applied = await ref
         .read(cartControllerProvider.notifier)
-        .setDiscount(
-          _discountController.text.trim().isEmpty
-              ? 0
-              : CartPricingConfig.mockDiscountAmount,
+        .applyDiscountCode(_discountController.text);
+    if (!mounted) return;
+    final message = applied
+        ? 'Discount code applied.'
+        : ref.read(cartControllerProvider).errorMessage ??
+              'This discount code is not applicable.';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _openShopifyCheckout() async {
+    if (_checkoutIsOpening) return;
+    setState(() => _checkoutIsOpening = true);
+
+    try {
+      final controller = ref.read(cartControllerProvider.notifier);
+      await controller.restore();
+      if (!mounted) return;
+
+      final state = ref.read(cartControllerProvider);
+      final cart = state.cart;
+      if (cart == null || cart.lines.isEmpty) {
+        _showCheckoutError(
+          state.errorMessage ?? 'Your Shopify cart is empty. Please retry.',
         );
+        return;
+      }
+
+      if (cart.checkoutUrl.trim().isEmpty) {
+        _showCheckoutError(
+          'Shopify checkout is unavailable right now. Please retry.',
+        );
+        return;
+      }
+
+      final opened = await ref
+          .read(shopifyCheckoutLauncherProvider)
+          .open(cart.checkoutUrl);
+      if (!mounted) return;
+      if (!opened) {
+        _showCheckoutError('Unable to open Shopify checkout. Please retry.');
+      }
+    } catch (_) {
+      if (mounted) {
+        _showCheckoutError('Unable to open Shopify checkout. Please retry.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _checkoutIsOpening = false);
+      }
+    }
+  }
+
+  void _showCheckoutError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _CartError extends StatelessWidget {
+  const _CartError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.sm),
+            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -147,9 +263,10 @@ class _CartHeader extends StatelessWidget {
 }
 
 class _CartItems extends ConsumerWidget {
-  const _CartItems({required this.items});
+  const _CartItems({required this.items, required this.mutationPending});
 
   final List<CartItem> items;
+  final bool mutationPending;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -159,11 +276,15 @@ class _CartItems extends ConsumerWidget {
         for (var index = 0; index < items.length; index++) ...[
           _CartItemCard(
             item: items[index],
-            onDecrease: () =>
-                controller.decreaseQuantity(items[index].variantId),
-            onIncrease: () =>
-                controller.increaseQuantity(items[index].variantId),
-            onDelete: () => controller.removeVariant(items[index].variantId),
+            onDecrease: mutationPending
+                ? null
+                : () => controller.decreaseQuantity(items[index].lineId),
+            onIncrease: mutationPending
+                ? null
+                : () => controller.increaseQuantity(items[index].lineId),
+            onDelete: mutationPending
+                ? null
+                : () => controller.removeLine(items[index].lineId),
           ),
           if (index < items.length - 1) const SizedBox(height: AppSpacing.xs),
         ],
@@ -181,9 +302,9 @@ class _CartItemCard extends StatelessWidget {
   });
 
   final CartItem item;
-  final VoidCallback onDecrease;
-  final VoidCallback onIncrease;
-  final VoidCallback onDelete;
+  final VoidCallback? onDecrease;
+  final VoidCallback? onIncrease;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -278,8 +399,8 @@ class _CartQuantityControl extends StatelessWidget {
   });
 
   final int quantity;
-  final VoidCallback onDecrease;
-  final VoidCallback onIncrease;
+  final VoidCallback? onDecrease;
+  final VoidCallback? onIncrease;
 
   @override
   Widget build(BuildContext context) {
@@ -321,7 +442,7 @@ class _QuantityButton extends StatelessWidget {
 
   final String semanticsLabel;
   final String assetPath;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -574,9 +695,17 @@ class _OrderSummaryCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
-          _SummaryRow(label: 'Shipping', value: summary.shipping),
+          _SummaryRow(
+            label: 'Shipping',
+            value: summary.shipping,
+            unavailable: !summary.shippingAvailable,
+          ),
           const SizedBox(height: AppSpacing.sm),
-          _SummaryRow(label: 'Estimated taxes', value: summary.estimatedTaxes),
+          _SummaryRow(
+            label: 'Estimated taxes',
+            value: summary.estimatedTaxes,
+            unavailable: !summary.estimatedTaxesAvailable,
+          ),
           const SizedBox(height: AppSpacing.sm),
           const Divider(height: 1, thickness: 1, color: AppColors.borderLight),
           const SizedBox(height: AppSpacing.sm),
@@ -601,20 +730,24 @@ class _SummaryRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.isNegative = false,
+    this.unavailable = false,
   });
 
   final String label;
   final double value;
   final bool isNegative;
+  final bool unavailable;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: AppTypography.cartSummaryLabel),
+        Expanded(child: Text(label, style: AppTypography.cartSummaryLabel)),
+        const SizedBox(width: AppSpacing.xs),
         Text(
-          '${isNegative ? '-' : ''}${formatGbp(value)}',
+          unavailable
+              ? 'At checkout'
+              : '${isNegative ? '-' : ''}${formatGbp(value)}',
           style: AppTypography.cartSummaryValue,
         ),
       ],
@@ -626,7 +759,7 @@ class _DiscountCard extends StatelessWidget {
   const _DiscountCard({required this.controller, required this.onApply});
 
   final TextEditingController controller;
-  final VoidCallback onApply;
+  final VoidCallback? onApply;
 
   @override
   Widget build(BuildContext context) {
@@ -646,7 +779,7 @@ class _DiscountCard extends StatelessWidget {
               height: 34,
               child: TextField(
                 controller: controller,
-                onSubmitted: (_) => onApply(),
+                onSubmitted: (_) => onApply?.call(),
                 style: AppTypography.cartDiscountInput,
                 decoration: InputDecoration(
                   hintText: 'Discount code',
@@ -703,7 +836,7 @@ class _CartBottomArea extends StatelessWidget {
 
   final bool hasItems;
   final double total;
-  final VoidCallback onCheckout;
+  final VoidCallback? onCheckout;
 
   @override
   Widget build(BuildContext context) {
@@ -760,7 +893,7 @@ class _SvgTouchButton extends StatelessWidget {
   final String semanticsLabel;
   final String assetPath;
   final double iconSize;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

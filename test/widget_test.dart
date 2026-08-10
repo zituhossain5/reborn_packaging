@@ -11,6 +11,10 @@ import 'package:reborn_packaging/features/products/models/product_page.dart';
 import 'package:reborn_packaging/features/products/state/collection_products_provider.dart';
 import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
 import 'package:reborn_packaging/features/products/state/product_details_provider.dart';
+import 'package:reborn_packaging/features/cart/data/cart_id_store.dart';
+import 'package:reborn_packaging/features/cart/data/shopify_cart_repository.dart';
+
+import 'support/fake_cart.dart';
 
 void main() {
   testWidgets('navigates from splash to the Home screen', (tester) async {
@@ -48,6 +52,8 @@ void main() {
                 mockProductDetailsForHandle(handle) ??
                 mockKraftRoundBowlsProduct,
           ),
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
         ],
         child: const RebornPackagingApp(),
       ),
@@ -187,7 +193,7 @@ void main() {
 
     expect(find.text('My Cart'), findsOneWidget);
     expect(find.text('(2 items)'), findsOneWidget);
-    expect(find.text('Proceed to checkout — \u00A3285.36'), findsOneWidget);
+    expect(find.text('Proceed to checkout — \u00A3237.80'), findsOneWidget);
     expect(find.byKey(const ValueKey('cart_quantity_badge')), findsOneWidget);
     expect(find.bySemanticsLabel('Increase cart quantity'), findsNWidgets(2));
 

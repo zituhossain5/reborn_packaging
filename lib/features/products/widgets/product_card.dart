@@ -20,6 +20,7 @@ class ProductCard extends StatelessWidget {
   static const _imageSize = 140.0;
   static const _buttonSize = 38.0;
   static const _bagIconSize = 18.0;
+  static const _buttonTop = AppSpacing.sm + _imageSize + AppSpacing.sm + 60;
 
   final ProductItem product;
   final VoidCallback? onTap;
@@ -29,93 +30,102 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: onTap != null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.all(Radius.circular(AppSpacing.sm)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final imageSize = math.min(_imageSize, constraints.maxWidth);
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              key: ValueKey('product_card_body_${product.handle}'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(AppSpacing.sm),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final imageSize = math.min(
+                        _imageSize,
+                        constraints.maxWidth,
+                      );
 
-                return Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: _imageSize,
-                      child: Center(
-                        child: SizedBox.square(
-                          dimension: imageSize,
-                          child: _ProductImage(product: product),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Expanded(child: _productDetails()),
-                  ],
-                );
-              },
+                      return Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: _imageSize,
+                            child: Center(
+                              child: SizedBox.square(
+                                dimension: imageSize,
+                                child: _ProductImage(product: product),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Expanded(child: _productDetails()),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+          Positioned(
+            right: AppSpacing.sm,
+            top: _buttonTop,
+            child: _AddToCartButton(
+              key: ValueKey('product_card_add_to_cart_${product.handle}'),
+              label: 'Add ${product.title} to cart',
+              enabled: product.availableForSale,
+              onTap: onAddToCart ?? () {},
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _productDetails() {
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              product.title,
-              maxLines: 2,
-              overflow: TextOverflow.clip,
-              style: AppTypography.productTitle,
-            ),
-            const SizedBox(height: AppSpacing.tiny),
-            SizedBox(
-              height: 15,
-              child: product.quantity == null
-                  ? null
-                  : Text(
-                      '${product.quantity} QTY',
-                      maxLines: 1,
-                      style: AppTypography.productQuantity,
-                    ),
-            ),
-            const SizedBox(height: AppSpacing.compact),
-            Text(
-              '${_currencyPrefix(product.currencyCode)}${product.price.toStringAsFixed(2)}',
-              maxLines: 1,
-              style: AppTypography.productPrice,
-            ),
-            SizedBox(
-              height: 13,
-              child: product.unitPrice == null
-                  ? null
-                  : Text(
-                      '${_currencyPrefix(product.currencyCode)}${product.unitPrice!.toStringAsFixed(3)} / piece',
-                      maxLines: 1,
-                      style: AppTypography.productUnitPrice,
-                    ),
-            ),
-          ],
+        Text(
+          product.title,
+          maxLines: 2,
+          overflow: TextOverflow.clip,
+          style: AppTypography.productTitle,
         ),
-        Positioned(
-          right: 0,
-          top: 60,
-          child: _AddToCartButton(
-            label: 'Add ${product.title} to cart',
-            enabled: product.availableForSale,
-            onTap: onAddToCart ?? () {},
-          ),
+        const SizedBox(height: AppSpacing.tiny),
+        SizedBox(
+          height: 15,
+          child: product.quantity == null
+              ? null
+              : Text(
+                  '${product.quantity} QTY',
+                  maxLines: 1,
+                  style: AppTypography.productQuantity,
+                ),
+        ),
+        const SizedBox(height: AppSpacing.compact),
+        Text(
+          '${_currencyPrefix(product.currencyCode)}${product.price.toStringAsFixed(2)}',
+          maxLines: 1,
+          style: AppTypography.productPrice,
+        ),
+        SizedBox(
+          height: 13,
+          child: product.unitPrice == null
+              ? null
+              : Text(
+                  '${_currencyPrefix(product.currencyCode)}${product.unitPrice!.toStringAsFixed(3)} / piece',
+                  maxLines: 1,
+                  style: AppTypography.productUnitPrice,
+                ),
         ),
       ],
     );
@@ -182,6 +192,7 @@ class _AddToCartButton extends StatefulWidget {
     required this.label,
     required this.enabled,
     required this.onTap,
+    super.key,
   });
 
   final String label;

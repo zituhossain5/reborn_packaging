@@ -35,6 +35,8 @@ dependencies:
   flutter_svg: ^2.2.3
   go_router: ^17.0.0
   html: ^0.15.6
+  shared_preferences: ^2.5.3
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
