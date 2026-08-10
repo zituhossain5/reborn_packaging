@@ -10,8 +10,9 @@ import '../../home/widgets/delivery_banner.dart';
 import '../../home/widgets/home_header.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
 import '../actions/product_cart_actions.dart';
-import '../data/mock_products.dart';
 import '../models/product_item.dart';
+import '../models/product_page.dart';
+import '../state/collection_products_provider.dart';
 import '../widgets/product_card.dart';
 
 class CollectionProductsScreen extends ConsumerWidget {
@@ -26,7 +27,7 @@ class CollectionProductsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final products = mockProductsForCollection(collectionHandle);
+    final products = ref.watch(collectionProductsProvider(collectionHandle));
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -74,36 +75,61 @@ class CollectionProductsScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.md,
-                            0,
-                            AppSpacing.md,
-                            AppSpacing.md,
-                          ),
-                          sliver: SliverGrid(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) => ProductCard(
-                                product: products[index],
-                                onTap: () => context.push(
-                                  '/products/${products[index].handle}',
-                                ),
-                                onAddToCart: () => _addToCartOrOpenDetails(
-                                  context: context,
-                                  ref: ref,
-                                  product: products[index],
-                                ),
+                        ...products.when(
+                          loading: () => const [
+                            _CollectionProductsState(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                                strokeWidth: 2,
                               ),
-                              childCount: products.length,
                             ),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: AppSpacing.sm,
-                                  mainAxisSpacing: AppSpacing.sm,
-                                  mainAxisExtent: ProductCard.height,
+                          ],
+                          error: (error, stackTrace) => [
+                            _CollectionProductsState(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Unable to load products.',
+                                    style: AppTypography.searchNoResults,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  FilledButton(
+                                    onPressed: () => ref.invalidate(
+                                      collectionProductsProvider(
+                                        collectionHandle,
+                                      ),
+                                    ),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                    ),
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          data: (catalog) => [
+                            if (catalog.items.isEmpty)
+                              const _CollectionProductsState(
+                                child: Text(
+                                  'No products found.',
+                                  style: AppTypography.searchNoResults,
                                 ),
-                          ),
+                              )
+                            else
+                              _ProductGrid(
+                                catalog: catalog,
+                                onProductTap: (product) =>
+                                    _openProduct(context, product),
+                                onAddToCart: (product) =>
+                                    _addToCartOrOpenDetails(
+                                      context: context,
+                                      ref: ref,
+                                      product: product,
+                                    ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -128,7 +154,67 @@ class CollectionProductsScreen extends ConsumerWidget {
     );
 
     if (!added) {
-      context.push('/products/${product.handle}');
+      _openProduct(context, product);
     }
+  }
+
+  void _openProduct(BuildContext context, ProductItem product) {
+    context.push('/products/${product.handle}', extra: collectionHandle);
+  }
+}
+
+class _ProductGrid extends StatelessWidget {
+  const _ProductGrid({
+    required this.catalog,
+    required this.onProductTap,
+    required this.onAddToCart,
+  });
+
+  final ProductCatalog catalog;
+  final ValueChanged<ProductItem> onProductTap;
+  final ValueChanged<ProductItem> onAddToCart;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.md,
+      ),
+      sliver: SliverGrid(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = catalog.items[index];
+          return ProductCard(
+            product: product,
+            onTap: () => onProductTap(product),
+            onAddToCart: () => onAddToCart(product),
+          );
+        }, childCount: catalog.items.length),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: AppSpacing.sm,
+          mainAxisSpacing: AppSpacing.sm,
+          mainAxisExtent: ProductCard.height,
+        ),
+      ),
+    );
+  }
+}
+
+class _CollectionProductsState extends StatelessWidget {
+  const _CollectionProductsState({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      sliver: SliverToBoxAdapter(
+        child: SizedBox(height: 180, child: Center(child: child)),
+      ),
+    );
   }
 }

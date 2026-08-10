@@ -6,6 +6,9 @@ import 'package:reborn_packaging/features/home/data/mock_collections.dart';
 import 'package:reborn_packaging/features/home/models/collection_page.dart';
 import 'package:reborn_packaging/features/home/state/home_collections_provider.dart';
 import 'package:reborn_packaging/features/products/widgets/product_option_chip.dart';
+import 'package:reborn_packaging/features/products/data/mock_products.dart';
+import 'package:reborn_packaging/features/products/models/product_page.dart';
+import 'package:reborn_packaging/features/products/state/collection_products_provider.dart';
 
 void main() {
   testWidgets('navigates from splash to the Home screen', (tester) async {
@@ -28,6 +31,16 @@ void main() {
               pagesFetched: 1,
             ),
           ),
+          collectionProductsProvider.overrideWith((ref, handle) async {
+            return ProductCatalog(
+              items: mockProductsForCollection(handle),
+              pageInfo: const ProductPageInfo(
+                hasNextPage: false,
+                endCursor: null,
+              ),
+              pagesFetched: 1,
+            );
+          }),
         ],
         child: const RebornPackagingApp(),
       ),

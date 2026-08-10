@@ -1,0 +1,5 @@
+{
+  "SHOPIFY_STORE_DOMAIN": "your-production-store.myshopify.com",
+  "SHOPIFY_API_VERSION": "2026-04",
+  "SHOPIFY_STOREFRONT_TOKEN": "replace-with-production-storefront-token"
+}

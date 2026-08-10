@@ -54,7 +54,13 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.productDetails,
       builder: (context, state) {
         final handle = state.pathParameters['handle']!;
-        final product = mockProductDetailsForHandle(handle)!;
+        final fallbackHandle = state.extra as String?;
+        final product =
+            mockProductDetailsForHandle(handle) ??
+            (fallbackHandle == null
+                ? null
+                : mockProductDetailsForHandle(fallbackHandle)) ??
+            mockProductDetailsForHandle('kraft-round-bowls')!;
 
         return ProductDetailsScreen(product: product);
       },

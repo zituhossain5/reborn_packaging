@@ -51,10 +51,7 @@ class ProductCard extends StatelessWidget {
                       child: Center(
                         child: SizedBox.square(
                           dimension: imageSize,
-                          child: Image.asset(
-                            product.imageAsset,
-                            fit: BoxFit.cover,
-                          ),
+                          child: _ProductImage(product: product),
                         ),
                       ),
                     ),
@@ -83,21 +80,31 @@ class ProductCard extends StatelessWidget {
               style: AppTypography.productTitle,
             ),
             const SizedBox(height: AppSpacing.tiny),
-            Text(
-              '${product.quantity} QTY',
-              maxLines: 1,
-              style: AppTypography.productQuantity,
+            SizedBox(
+              height: 15,
+              child: product.quantity == null
+                  ? null
+                  : Text(
+                      '${product.quantity} QTY',
+                      maxLines: 1,
+                      style: AppTypography.productQuantity,
+                    ),
             ),
             const SizedBox(height: AppSpacing.compact),
             Text(
-              '\u00A3${product.price.toStringAsFixed(2)}',
+              '${_currencyPrefix(product.currencyCode)}${product.price.toStringAsFixed(2)}',
               maxLines: 1,
               style: AppTypography.productPrice,
             ),
-            Text(
-              '\u00A3${product.unitPrice.toStringAsFixed(3)} / piece',
-              maxLines: 1,
-              style: AppTypography.productUnitPrice,
+            SizedBox(
+              height: 13,
+              child: product.unitPrice == null
+                  ? null
+                  : Text(
+                      '${_currencyPrefix(product.currencyCode)}${product.unitPrice!.toStringAsFixed(3)} / piece',
+                      maxLines: 1,
+                      style: AppTypography.productUnitPrice,
+                    ),
             ),
           ],
         ),
@@ -106,18 +113,79 @@ class ProductCard extends StatelessWidget {
           top: 60,
           child: _AddToCartButton(
             label: 'Add ${product.title} to cart',
+            enabled: product.availableForSale,
             onTap: onAddToCart ?? () {},
           ),
         ),
       ],
     );
   }
+
+  String _currencyPrefix(String currencyCode) {
+    return currencyCode == 'GBP' ? '\u00A3' : '$currencyCode ';
+  }
+}
+
+class _ProductImage extends StatelessWidget {
+  const _ProductImage({required this.product});
+
+  final ProductItem product;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = product.imageUrl;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        semanticLabel: product.imageAltText,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => const _ImagePlaceholder(),
+      );
+    }
+
+    final imageAsset = product.imageAsset;
+    if (imageAsset != null && imageAsset.isNotEmpty) {
+      return Image.asset(imageAsset, fit: BoxFit.cover);
+    }
+
+    return const _ImagePlaceholder();
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Icon(
+      Icons.image_not_supported_outlined,
+      color: AppColors.lightText,
+      size: 24,
+    );
+  }
 }
 
 class _AddToCartButton extends StatefulWidget {
-  const _AddToCartButton({required this.label, required this.onTap});
+  const _AddToCartButton({
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
 
   final String label;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
@@ -131,13 +199,14 @@ class _AddToCartButtonState extends State<_AddToCartButton> {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
+      enabled: widget.enabled,
       label: widget.label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        onTapDown: (_) => _setPressed(true),
-        onTapUp: (_) => _setPressed(false),
-        onTapCancel: () => _setPressed(false),
+        onTap: widget.enabled ? widget.onTap : null,
+        onTapDown: widget.enabled ? (_) => _setPressed(true) : null,
+        onTapUp: widget.enabled ? (_) => _setPressed(false) : null,
+        onTapCancel: widget.enabled ? () => _setPressed(false) : null,
         child: AnimatedScale(
           scale: _pressed ? 0.94 : 1,
           duration: const Duration(milliseconds: 90),
