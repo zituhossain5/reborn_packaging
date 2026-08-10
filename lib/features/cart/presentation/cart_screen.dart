@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -182,12 +183,24 @@ class _CartScreenState extends ConsumerState<CartScreen>
         return;
       }
 
-      final opened = await ref
+      final checkoutResult = await ref
           .read(shopifyCheckoutLauncherProvider)
-          .open(cart.checkoutUrl);
+          .present(cart.checkoutUrl);
       if (!mounted) return;
-      if (!opened) {
-        _showCheckoutError('Unable to open Shopify checkout. Please retry.');
+
+      switch (checkoutResult.status) {
+        case ShopifyCheckoutStatus.completed:
+          await ref.read(cartControllerProvider.notifier).clear();
+          if (mounted) context.go('/checkout/confirmation');
+        case ShopifyCheckoutStatus.canceled:
+          break;
+        case ShopifyCheckoutStatus.failed:
+          _showCheckoutError(
+            checkoutResult.message ??
+                'Unable to open Shopify checkout. Please retry.',
+          );
+        case ShopifyCheckoutStatus.externalOpened:
+          break;
       }
     } catch (_) {
       if (mounted) {

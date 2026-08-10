@@ -15,7 +15,7 @@ import 'package:reborn_packaging/features/cart/data/shopify_cart_repository.dart
 import 'support/fake_cart.dart';
 
 void main() {
-  testWidgets('cart opens Shopify checkout URL without mock navigation', (
+  testWidgets('canceled Shopify checkout preserves cart and route', (
     tester,
   ) async {
     _configureViewport(tester);
@@ -39,8 +39,48 @@ void main() {
 
     expect(find.text('My Cart'), findsOneWidget);
     expect(find.text('Checkout'), findsNothing);
-    expect(checkoutLauncher.openCalls, 1);
+    expect(checkoutLauncher.presentCalls, 1);
     expect(checkoutLauncher.lastCheckoutUrl, 'https://example.test/checkout');
+    final cartContext = tester.element(find.text('My Cart'));
+    expect(
+      ProviderScope.containerOf(cartContext).read(cartControllerProvider).items,
+      isNotEmpty,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('completed Shopify checkout clears cart and confirms order', (
+    tester,
+  ) async {
+    _configureViewport(tester);
+    final router = _router();
+    final checkoutLauncher = _FakeShopifyCheckoutLauncher(
+      result: const ShopifyCheckoutResult.completed(),
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+          shopifyCheckoutLauncherProvider.overrideWithValue(checkoutLauncher),
+        ],
+        child: _SeededCheckoutApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Proceed to checkout'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order placed!'), findsOneWidget);
+    final confirmationContext = tester.element(find.text('Order placed!'));
+    expect(
+      ProviderScope.containerOf(
+        confirmationContext,
+      ).read(cartControllerProvider).items,
+      isEmpty,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -133,14 +173,19 @@ void main() {
 }
 
 class _FakeShopifyCheckoutLauncher implements ShopifyCheckoutLauncher {
-  int openCalls = 0;
+  _FakeShopifyCheckoutLauncher({
+    this.result = const ShopifyCheckoutResult.canceled(),
+  });
+
+  final ShopifyCheckoutResult result;
+  int presentCalls = 0;
   String? lastCheckoutUrl;
 
   @override
-  Future<bool> open(String checkoutUrl) async {
-    openCalls++;
+  Future<ShopifyCheckoutResult> present(String checkoutUrl) async {
+    presentCalls++;
     lastCheckoutUrl = checkoutUrl;
-    return true;
+    return result;
   }
 }
 
