@@ -25,7 +25,11 @@ class PlatformShopifyCheckoutLauncher implements ShopifyCheckoutLauncher {
       return const ShopifyCheckoutResult.failed('Checkout is unavailable.');
     }
 
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    final usesNativeCheckoutKit =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    if (usesNativeCheckoutKit) {
       try {
         final response = await _channel.invokeMapMethod<String, dynamic>(
           'presentCheckout',
