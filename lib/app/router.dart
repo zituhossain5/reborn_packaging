@@ -5,6 +5,7 @@ import '../features/cart/presentation/cart_screen.dart';
 import '../features/checkout/presentation/checkout_screen.dart';
 import '../features/checkout/presentation/payment_screen.dart';
 import '../features/checkout/presentation/order_confirmation_screen.dart';
+import '../features/checkout/services/shopify_checkout_launcher.dart';
 import '../features/products/presentation/collection_products_screen.dart';
 import '../features/products/presentation/product_details_route_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
@@ -76,7 +77,9 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.mockCheckoutConfirmation,
-      builder: (context, state) => const OrderConfirmationScreen(),
+      builder: (context, state) => OrderConfirmationScreen(
+        completion: state.extra as ShopifyCheckoutCompletion?,
+      ),
     ),
     GoRoute(
       path: AppRoutes.login,

@@ -3,6 +3,8 @@ package com.rebornpackaging.reborn_packaging
 import com.shopify.checkoutsheetkit.DefaultCheckoutEventProcessor
 import com.shopify.checkoutsheetkit.CheckoutException
 import com.shopify.checkoutsheetkit.CheckoutSheetKitDialog
+import com.shopify.checkoutsheetkit.Color
+import com.shopify.checkoutsheetkit.ColorScheme
 import com.shopify.checkoutsheetkit.ShopifyCheckoutSheetKit
 import com.shopify.checkoutsheetkit.lifecycleevents.CheckoutCompletedEvent
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -15,6 +17,15 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        ShopifyCheckoutSheetKit.configure {
+            it.colorScheme = ColorScheme.Light().customize {
+                headerBackground = Color.ResourceId(R.color.checkout_header_background)
+                headerFont = Color.ResourceId(R.color.checkout_header_foreground)
+                closeIconTint = Color.ResourceId(R.color.checkout_header_foreground)
+                progressIndicator = Color.ResourceId(R.color.checkout_progress)
+                webViewBackground = Color.ResourceId(R.color.checkout_background)
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHECKOUT_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -37,7 +48,18 @@ class MainActivity : FlutterFragmentActivity() {
         pendingCheckoutResult = result
         val eventProcessor = object : DefaultCheckoutEventProcessor(this@MainActivity) {
             override fun onCheckoutCompleted(checkoutCompletedEvent: CheckoutCompletedEvent) {
-                finishCheckout("checkoutCompleted", dismissDialog = true)
+                val order = checkoutCompletedEvent.orderDetails
+                val total = order.cart.price.total
+                finishCheckout(
+                    "checkoutCompleted",
+                    dismissDialog = true,
+                    details = mapOf(
+                        "orderId" to order.id,
+                        "itemCount" to order.cart.lines.sumOf { it.quantity },
+                        "totalAmount" to total?.amount,
+                        "currencyCode" to total?.currencyCode,
+                    ),
+                )
             }
 
             override fun onCheckoutCanceled() {
@@ -60,6 +82,7 @@ class MainActivity : FlutterFragmentActivity() {
         event: String,
         errorCode: String? = null,
         dismissDialog: Boolean = false,
+        details: Map<String, Any?> = emptyMap(),
     ) {
         val result = pendingCheckoutResult ?: return
         pendingCheckoutResult = null
@@ -67,9 +90,10 @@ class MainActivity : FlutterFragmentActivity() {
         checkoutDialog = null
         if (dismissDialog) dialog?.dismiss()
         result.success(
-            buildMap<String, String> {
+            buildMap<String, Any?> {
                 put("event", event)
                 errorCode?.takeIf { it.isNotBlank() }?.let { put("errorCode", it) }
+                putAll(details.filterValues { it != null })
             },
         )
     }

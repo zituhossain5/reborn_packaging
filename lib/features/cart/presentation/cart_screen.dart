@@ -191,7 +191,12 @@ class _CartScreenState extends ConsumerState<CartScreen>
       switch (checkoutResult.status) {
         case ShopifyCheckoutStatus.completed:
           await ref.read(cartControllerProvider.notifier).clear();
-          if (mounted) context.go('/checkout/confirmation');
+          if (mounted) {
+            context.go(
+              '/checkout/confirmation',
+              extra: checkoutResult.completion,
+            );
+          }
         case ShopifyCheckoutStatus.canceled:
           break;
         case ShopifyCheckoutStatus.failed:

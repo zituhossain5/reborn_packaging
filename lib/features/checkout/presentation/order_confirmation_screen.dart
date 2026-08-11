@@ -10,9 +10,12 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/formatters/money_formatter.dart';
 import '../../cart/models/cart_summary.dart';
 import '../../cart/state/cart_controller.dart';
+import '../services/shopify_checkout_launcher.dart';
 
 class OrderConfirmationScreen extends ConsumerWidget {
-  const OrderConfirmationScreen({super.key});
+  const OrderConfirmationScreen({super.key, this.completion});
+
+  final ShopifyCheckoutCompletion? completion;
 
   static const _mockOrderNumber = '#RP-20843';
   static const _estimatedArrival = 'Tomorrow by 5PM';
@@ -20,7 +23,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartControllerProvider);
-    final itemCount = cart.items.fold<int>(
+    final mockItemCount = cart.items.fold<int>(
       0,
       (total, item) => total + item.quantity,
     );
@@ -28,6 +31,13 @@ class OrderConfirmationScreen extends ConsumerWidget {
       items: cart.items,
       requestedDiscount: cart.discountAmount,
     );
+    final isRealCheckout = completion != null;
+    final itemCount = isRealCheckout ? completion!.itemCount : mockItemCount;
+    final total = isRealCheckout ? completion!.totalAmount : summary.total;
+    final orderReference = isRealCheckout
+        ? _orderReference(completion!.orderId)
+        : _mockOrderNumber;
+    final estimatedArrival = isRealCheckout ? null : _estimatedArrival;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -57,13 +67,14 @@ class OrderConfirmationScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         SizedBox(height: topSpacing),
-                        const _SuccessMessage(),
+                        _SuccessMessage(realCheckout: isRealCheckout),
                         const SizedBox(height: AppSpacing.md),
                         _OrderSummary(
-                          orderNumber: _mockOrderNumber,
+                          orderReference: orderReference,
                           itemCount: itemCount,
-                          total: summary.total,
-                          estimatedArrival: _estimatedArrival,
+                          total: total,
+                          currencyCode: completion?.currencyCode,
+                          estimatedArrival: estimatedArrival,
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         _OrderActionButton(
@@ -91,10 +102,18 @@ class OrderConfirmationScreen extends ConsumerWidget {
       ),
     );
   }
+
+  static String? _orderReference(String? orderId) {
+    final value = orderId?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value.split('/').last;
+  }
 }
 
 class _SuccessMessage extends StatelessWidget {
-  const _SuccessMessage();
+  const _SuccessMessage({required this.realCheckout});
+
+  final bool realCheckout;
 
   @override
   Widget build(BuildContext context) {
@@ -117,9 +136,11 @@ class _SuccessMessage extends StatelessWidget {
         const SizedBox(height: AppSpacing.tiny),
         const Text('Order placed!', style: AppTypography.orderPlacedTitle),
         const SizedBox(height: AppSpacing.tiny),
-        const Text(
-          'Your order has been confirmed and will be dispatched '
-          'for next-day delivery.',
+        Text(
+          realCheckout
+              ? 'Your order has been confirmed.'
+              : 'Your order has been confirmed and will be dispatched '
+                    'for next-day delivery.',
           textAlign: TextAlign.center,
           style: AppTypography.orderConfirmation,
         ),
@@ -130,20 +151,24 @@ class _SuccessMessage extends StatelessWidget {
 
 class _OrderSummary extends StatelessWidget {
   const _OrderSummary({
-    required this.orderNumber,
+    required this.orderReference,
     required this.itemCount,
     required this.total,
+    required this.currencyCode,
     required this.estimatedArrival,
   });
 
-  final String orderNumber;
-  final int itemCount;
-  final double total;
-  final String estimatedArrival;
+  final String? orderReference;
+  final int? itemCount;
+  final double? total;
+  final String? currencyCode;
+  final String? estimatedArrival;
 
   @override
   Widget build(BuildContext context) {
-    final itemLabel = '$itemCount ${itemCount == 1 ? 'product' : 'products'}';
+    final itemLabel = itemCount == null
+        ? null
+        : '$itemCount ${itemCount == 1 ? 'product' : 'products'}';
 
     return Container(
       width: double.infinity,
@@ -154,24 +179,42 @@ class _OrderSummary extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _SummaryRow(
-              label: 'Order number',
-              value: orderNumber,
-              emphasized: true,
+          if (orderReference != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _SummaryRow(
+                label: orderReference!.startsWith('#')
+                    ? 'Order number'
+                    : 'Order reference',
+                value: orderReference!,
+                emphasized: true,
+              ),
             ),
-          ),
-          const Divider(height: 1, color: AppColors.borderLight),
-          const SizedBox(height: AppSpacing.sm),
-          _SummaryRow(label: 'Items', value: itemLabel),
-          const SizedBox(height: AppSpacing.sm),
-          _SummaryRow(label: 'Total', value: formatGbp(total)),
-          const SizedBox(height: AppSpacing.sm),
-          _SummaryRow(label: 'Estimated arrival', value: estimatedArrival),
+            const Divider(height: 1, color: AppColors.borderLight),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          if (itemLabel != null) _SummaryRow(label: 'Items', value: itemLabel),
+          if (itemLabel != null && total != null)
+            const SizedBox(height: AppSpacing.sm),
+          if (total != null)
+            _SummaryRow(
+              label: 'Total',
+              value: _formatAmount(total!, currencyCode),
+            ),
+          if (estimatedArrival != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _SummaryRow(label: 'Estimated arrival', value: estimatedArrival!),
+          ],
         ],
       ),
     );
+  }
+
+  static String _formatAmount(double amount, String? currencyCode) {
+    if (currencyCode == null || currencyCode == 'GBP') {
+      return formatGbp(amount);
+    }
+    return '$currencyCode ${amount.toStringAsFixed(2)}';
   }
 }
 

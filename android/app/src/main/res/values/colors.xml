@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="checkout_header_background">#FFFFFF</color>
+    <color name="checkout_header_foreground">#124B3D</color>
+    <color name="checkout_progress">#124B3D</color>
+    <color name="checkout_background">#FFFFFF</color>
+</resources>

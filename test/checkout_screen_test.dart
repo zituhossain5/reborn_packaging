@@ -55,7 +55,14 @@ void main() {
     _configureViewport(tester);
     final router = _router();
     final checkoutLauncher = _FakeShopifyCheckoutLauncher(
-      result: const ShopifyCheckoutResult.completed(),
+      result: const ShopifyCheckoutResult.completed(
+        ShopifyCheckoutCompletion(
+          orderId: 'gid://shopify/Order/20843',
+          itemCount: 1,
+          totalAmount: 71.93,
+          currencyCode: 'GBP',
+        ),
+      ),
     );
     addTearDown(router.dispose);
 
@@ -74,6 +81,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Order placed!'), findsOneWidget);
+    expect(find.text('20843'), findsOneWidget);
+    expect(find.text('#RP-20843'), findsNothing);
     final confirmationContext = tester.element(find.text('Order placed!'));
     expect(
       ProviderScope.containerOf(
@@ -234,7 +243,9 @@ GoRouter _router({String initialLocation = '/cart'}) {
       ),
       GoRoute(
         path: '/checkout/confirmation',
-        builder: (context, state) => const OrderConfirmationScreen(),
+        builder: (context, state) => OrderConfirmationScreen(
+          completion: state.extra as ShopifyCheckoutCompletion?,
+        ),
       ),
       GoRoute(
         path: '/home',

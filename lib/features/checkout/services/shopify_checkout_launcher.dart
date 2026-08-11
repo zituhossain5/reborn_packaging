@@ -59,10 +59,10 @@ class PlatformShopifyCheckoutLauncher implements ShopifyCheckoutLauncher {
 enum ShopifyCheckoutStatus { completed, canceled, failed, externalOpened }
 
 class ShopifyCheckoutResult {
-  const ShopifyCheckoutResult._(this.status, [this.message]);
+  const ShopifyCheckoutResult._(this.status, [this.message, this.completion]);
 
-  const ShopifyCheckoutResult.completed()
-    : this._(ShopifyCheckoutStatus.completed);
+  const ShopifyCheckoutResult.completed([ShopifyCheckoutCompletion? completion])
+    : this._(ShopifyCheckoutStatus.completed, null, completion);
 
   const ShopifyCheckoutResult.canceled()
     : this._(ShopifyCheckoutStatus.canceled);
@@ -76,7 +76,9 @@ class ShopifyCheckoutResult {
   factory ShopifyCheckoutResult.fromNative(Map<String, dynamic>? response) {
     final event = response?['event'];
     return switch (event) {
-      'checkoutCompleted' => const ShopifyCheckoutResult.completed(),
+      'checkoutCompleted' => ShopifyCheckoutResult.completed(
+        ShopifyCheckoutCompletion.fromNative(response),
+      ),
       'checkoutCanceled' => const ShopifyCheckoutResult.canceled(),
       'checkoutFailed' => ShopifyCheckoutResult.failed(
         PlatformShopifyCheckoutLauncher._messageForCode(
@@ -91,4 +93,28 @@ class ShopifyCheckoutResult {
 
   final ShopifyCheckoutStatus status;
   final String? message;
+  final ShopifyCheckoutCompletion? completion;
+}
+
+class ShopifyCheckoutCompletion {
+  const ShopifyCheckoutCompletion({
+    this.orderId,
+    this.itemCount,
+    this.totalAmount,
+    this.currencyCode,
+  });
+
+  factory ShopifyCheckoutCompletion.fromNative(Map<String, dynamic>? response) {
+    return ShopifyCheckoutCompletion(
+      orderId: response?['orderId'] as String?,
+      itemCount: (response?['itemCount'] as num?)?.toInt(),
+      totalAmount: (response?['totalAmount'] as num?)?.toDouble(),
+      currencyCode: response?['currencyCode'] as String?,
+    );
+  }
+
+  final String? orderId;
+  final int? itemCount;
+  final double? totalAmount;
+  final String? currencyCode;
 }
