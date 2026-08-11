@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/cart/state/cart_controller.dart';
+import '../features/auth/state/customer_auth_controller.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 
@@ -11,6 +12,7 @@ class RebornPackagingApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(cartControllerProvider);
+    ref.watch(customerAuthControllerProvider);
     return MaterialApp.router(
       title: 'Reborn Packaging',
       debugShowCheckedModeBanner: false,

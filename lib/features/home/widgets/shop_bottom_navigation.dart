@@ -8,7 +8,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../cart/state/cart_controller.dart';
 import '../../cart/widgets/cart_quantity_badge.dart';
-import '../../auth/state/mock_auth_controller.dart';
+import '../../auth/state/customer_auth_controller.dart';
 
 enum ShopNavigationItem { shop, cart, account }
 
@@ -21,7 +21,8 @@ class ShopBottomNavigation extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cartQuantity = ref.watch(cartTotalQuantityProvider);
-    final isMockAuthenticated = ref.watch(mockAuthControllerProvider);
+    final isAuthenticated =
+        ref.watch(customerAuthControllerProvider).value != null;
     final activeItem = _activeItemForPath(GoRouterState.of(context).uri.path);
 
     return DecoratedBox(
@@ -98,7 +99,7 @@ class ShopBottomNavigation extends ConsumerWidget {
                             ? const EdgeInsets.all(2.25)
                             : const EdgeInsets.all(2.438),
                         onTap: () => context.go(
-                          isMockAuthenticated ? '/account' : '/login',
+                          isAuthenticated ? '/account' : '/login',
                         ),
                       ),
                     ),

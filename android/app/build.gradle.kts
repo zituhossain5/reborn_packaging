@@ -4,6 +4,28 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val decodedDartDefines = (project.findProperty("dart-defines") as String?)
+    ?.split(',')
+    ?.mapNotNull { encoded ->
+        runCatching {
+            String(java.util.Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+        }.getOrNull()
+    }
+    ?.mapNotNull { definition ->
+        val separator = definition.indexOf('=')
+        if (separator <= 0) null
+        else definition.substring(0, separator) to definition.substring(separator + 1)
+    }
+    ?.toMap()
+    .orEmpty()
+
+val customerAccountRedirectScheme = decodedDartDefines[
+    "SHOPIFY_CUSTOMER_ACCOUNT_REDIRECT_URI"
+]
+    ?.let { runCatching { java.net.URI(it).scheme }.getOrNull() }
+    ?.takeIf { it.startsWith("shop.") }
+    ?: "shop.customer-account.unconfigured"
+
 android {
     namespace = "com.rebornpackaging.reborn_packaging"
     compileSdk = flutter.compileSdkVersion
@@ -19,10 +41,11 @@ android {
         applicationId = "com.rebornpackaging.reborn_packaging"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appAuthRedirectScheme"] = customerAccountRedirectScheme
     }
 
     buildTypes {

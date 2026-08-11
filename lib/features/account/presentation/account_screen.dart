@@ -7,7 +7,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../auth/presentation/login_screen.dart';
-import '../../auth/state/mock_auth_controller.dart';
+import '../../auth/state/customer_auth_controller.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
 import '../models/account_models.dart';
 import '../state/mock_account_state.dart';
@@ -29,8 +29,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isMockAuthenticated = ref.watch(mockAuthControllerProvider);
-    if (!isMockAuthenticated) {
+    final auth = ref.watch(customerAuthControllerProvider);
+    if (auth.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.white,
+        bottomNavigationBar: ShopBottomNavigation(),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (auth.value == null) {
       return const LoginScreen();
     }
 
@@ -92,13 +99,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                         onMarketingChanged: (value) => ref
                             .read(mockAccountStateProvider.notifier)
                             .setMarketingEmailsEnabled(value),
-                        onSignOut: () {
+                        onSignOut: () async {
                           ref
                               .read(mockAccountStateProvider.notifier)
                               .resetSession();
-                          ref
-                              .read(mockAuthControllerProvider.notifier)
+                          await ref
+                              .read(customerAuthControllerProvider.notifier)
                               .signOut();
+                          if (!context.mounted) return;
                           context.go('/login');
                         },
                       ),

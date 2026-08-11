@@ -7,7 +7,8 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
-import '../state/mock_auth_controller.dart';
+import '../config/customer_account_config.dart';
+import '../state/customer_auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -29,23 +30,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _signInWithEmail() {
+  Future<void> _signInWithEmail() async {
     final email = _emailController.text.trim();
     if (!_emailPattern.hasMatch(email)) {
       setState(() => _emailError = 'Enter a valid email address.');
       return;
     }
 
-    _completeMockSignIn();
+    await _startShopifySignIn(loginHint: email);
   }
 
-  void _completeMockSignIn() {
-    ref.read(mockAuthControllerProvider.notifier).signIn();
-    context.go('/account');
+  Future<void> _startShopifySignIn({String? loginHint}) async {
+    final succeeded = await ref
+        .read(customerAuthControllerProvider.notifier)
+        .signIn(loginHint: loginHint);
+    if (!mounted) return;
+    if (succeeded) {
+      context.go('/account');
+      return;
+    }
+    final error = ref.read(customerAuthControllerProvider).error;
+    if (error is CustomerAuthCanceledException) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error?.toString() ?? 'Unable to sign in.')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isSigningIn = ref.watch(customerAuthControllerProvider).isLoading;
     return Scaffold(
       backgroundColor: AppColors.white,
       resizeToAvoidBottomInset: true,
@@ -75,7 +88,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onMarketingChanged: (value) {
                         setState(() => _acceptsMarketing = value);
                       },
-                      onShopPressed: _completeMockSignIn,
+                      isSigningIn: isSigningIn,
+                      onShopPressed: _startShopifySignIn,
                       onSignInPressed: _signInWithEmail,
                     ),
                     const SizedBox(height: 58),
@@ -95,6 +109,7 @@ class _LoginContent extends StatelessWidget {
     required this.emailController,
     required this.emailError,
     required this.acceptsMarketing,
+    required this.isSigningIn,
     required this.onEmailChanged,
     required this.onMarketingChanged,
     required this.onShopPressed,
@@ -104,6 +119,7 @@ class _LoginContent extends StatelessWidget {
   final TextEditingController emailController;
   final String? emailError;
   final bool acceptsMarketing;
+  final bool isSigningIn;
   final ValueChanged<String> onEmailChanged;
   final ValueChanged<bool> onMarketingChanged;
   final VoidCallback onShopPressed;
@@ -141,7 +157,7 @@ class _LoginContent extends StatelessWidget {
           SizedBox(
             height: 44,
             child: FilledButton(
-              onPressed: onShopPressed,
+              onPressed: isSigningIn ? null : onShopPressed,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.shopPay,
                 foregroundColor: AppColors.white,
@@ -222,7 +238,7 @@ class _LoginContent extends StatelessWidget {
           SizedBox(
             height: 46,
             child: FilledButton(
-              onPressed: onSignInPressed,
+              onPressed: isSigningIn ? null : onSignInPressed,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
@@ -233,7 +249,15 @@ class _LoginContent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppSpacing.sm),
                 ),
               ),
-              child: const Text('Sign in', style: AppTypography.loginButton),
+              child: isSigningIn
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
+                      ),
+                    )
+                  : const Text('Sign in', style: AppTypography.loginButton),
             ),
           ),
         ],
