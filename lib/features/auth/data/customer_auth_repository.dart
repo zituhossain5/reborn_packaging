@@ -23,10 +23,14 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
         const CustomerAccountDiscoveryService(),
     CustomerAuthSessionStore sessionStore = const CustomerAuthSessionStore(),
     FlutterAppAuth appAuth = const FlutterAppAuth(),
-  }) : _config = config,
-       _discoveryService = discoveryService,
-       _sessionStore = sessionStore,
-       _appAuth = appAuth;
+  }) : this._(config, discoveryService, sessionStore, appAuth);
+
+  ShopifyCustomerAuthRepository._(
+    this._config,
+    this._discoveryService,
+    this._sessionStore,
+    this._appAuth,
+  );
 
   final CustomerAccountConfig _config;
   final CustomerAccountDiscoveryService _discoveryService;
@@ -101,7 +105,10 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
           ..connectionTimeout = const Duration(seconds: 15);
         try {
           final request = await client.getUrl(logoutUri);
-          request.headers.set(HttpHeaders.userAgentHeader, 'RebornPackaging/1.0');
+          request.headers.set(
+            HttpHeaders.userAgentHeader,
+            'RebornPackaging/1.0',
+          );
           await request.close().timeout(const Duration(seconds: 15));
         } finally {
           client.close(force: true);

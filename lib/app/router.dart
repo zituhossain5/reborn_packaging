@@ -11,6 +11,7 @@ import '../features/products/presentation/product_details_route_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/account/presentation/account_screen.dart';
+import '../features/account/presentation/order_details_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 
 abstract final class AppRoutes {
@@ -27,6 +28,7 @@ abstract final class AppRoutes {
   static const mockCheckoutConfirmation = '/checkout/confirmation';
   static const login = '/login';
   static const account = '/account';
+  static const orderDetails = '/account/orders/details';
 }
 
 final GoRouter appRouter = GoRouter(
@@ -88,6 +90,12 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.account,
       builder: (context, state) => const AccountScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.orderDetails,
+      builder: (context, state) => OrderDetailsScreen(
+        orderId: state.extra as String? ?? '',
+      ),
     ),
   ],
 );

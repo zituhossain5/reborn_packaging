@@ -1,3 +1,7 @@
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -8,7 +12,7 @@ val decodedDartDefines = (project.findProperty("dart-defines") as String?)
     ?.split(',')
     ?.mapNotNull { encoded ->
         runCatching {
-            String(java.util.Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+            String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8)
         }.getOrNull()
     }
     ?.mapNotNull { definition ->
@@ -22,8 +26,8 @@ val decodedDartDefines = (project.findProperty("dart-defines") as String?)
 val customerAccountRedirectScheme = decodedDartDefines[
     "SHOPIFY_CUSTOMER_ACCOUNT_REDIRECT_URI"
 ]
-    ?.let { runCatching { java.net.URI(it).scheme }.getOrNull() }
-    ?.takeIf { it.startsWith("shop.") }
+    ?.let { redirectUri -> runCatching { URI(redirectUri).scheme }.getOrNull() }
+    ?.let { scheme -> if (scheme != null && scheme.startsWith("shop.")) scheme else null }
     ?: "shop.customer-account.unconfigured"
 
 android {

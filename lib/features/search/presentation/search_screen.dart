@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../cart/state/cart_controller.dart';
+import '../../cart/widgets/cart_add_feedback.dart';
 import '../../products/actions/product_cart_actions.dart';
 import '../../products/models/product_item.dart';
 import '../../products/widgets/product_card.dart';
@@ -290,15 +292,33 @@ class _SearchBody extends ConsumerWidget {
     required WidgetRef ref,
     required ProductItem product,
   }) async {
-    final added = await addProductItemDefaultVariantToCart(
+    final result = await quickAddProductItemToCart(
       ref: ref,
       product: product,
     );
 
     if (!context.mounted) return;
-    if (!added) {
-      FocusScope.of(context).unfocus();
-      context.push('/products/${product.handle}');
+    switch (result) {
+      case ProductQuickAddResult.added:
+        showAddedToCartFeedback(context);
+        return;
+      case ProductQuickAddResult.requiresOptionSelection:
+        FocusScope.of(context).unfocus();
+        context.push('/products/${product.handle}');
+        return;
+      case ProductQuickAddResult.unavailable:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This product is currently unavailable.'),
+          ),
+        );
+        return;
+      case ProductQuickAddResult.failed:
+        final error = ref.read(cartControllerProvider).errorMessage;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error ?? 'Unable to add product to cart.')),
+        );
+        return;
     }
   }
 }

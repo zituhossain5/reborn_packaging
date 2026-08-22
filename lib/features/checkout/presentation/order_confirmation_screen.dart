@@ -10,6 +10,8 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/formatters/money_formatter.dart';
 import '../../cart/models/cart_summary.dart';
 import '../../cart/state/cart_controller.dart';
+import '../../account/models/customer_order_details.dart';
+import '../../account/state/customer_order_details_provider.dart';
 import '../services/shopify_checkout_launcher.dart';
 
 class OrderConfirmationScreen extends ConsumerWidget {
@@ -32,12 +34,33 @@ class OrderConfirmationScreen extends ConsumerWidget {
       requestedDiscount: cart.discountAmount,
     );
     final isRealCheckout = completion != null;
-    final itemCount = isRealCheckout ? completion!.itemCount : mockItemCount;
-    final total = isRealCheckout ? completion!.totalAmount : summary.total;
+    final orderId = completion?.orderId?.trim();
+    final canLoadOrderDetails =
+        isRealCheckout &&
+        orderId != null &&
+        orderId.isNotEmpty &&
+        ref.watch(isCustomerAccountAuthenticatedProvider);
+    final orderDetails = canLoadOrderDetails
+        ? ref.watch(customerOrderDetailsProvider(orderId))
+        : null;
+    final resolvedOrder = orderDetails?.value;
+    final itemCount = isRealCheckout
+        ? _resolvedItemCount(resolvedOrder) ?? completion!.itemCount
+        : mockItemCount;
+    final total = isRealCheckout
+        ? resolvedOrder?.totalPrice.amount ?? completion!.totalAmount
+        : summary.total;
+    final currencyCode = isRealCheckout
+        ? resolvedOrder?.totalPrice.currencyCode ?? completion?.currencyCode
+        : completion?.currencyCode;
+    // Checkout Kit's order ID is authoritative for API lookup but is not the
+    // customer-facing Shopify order name (for example, #1182).
     final orderReference = isRealCheckout
-        ? _orderReference(completion!.orderId)
+        ? _orderNumber(resolvedOrder)
         : _mockOrderNumber;
-    final estimatedArrival = isRealCheckout ? null : _estimatedArrival;
+    final estimatedArrival = isRealCheckout
+        ? _estimatedArrivalLabel(context, resolvedOrder)
+        : _estimatedArrival;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -71,9 +94,11 @@ class OrderConfirmationScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.md),
                         _OrderSummary(
                           orderReference: orderReference,
+                          isLoadingOrderMetadata:
+                              orderDetails?.isLoading ?? false,
                           itemCount: itemCount,
                           total: total,
-                          currencyCode: completion?.currencyCode,
+                          currencyCode: currencyCode,
                           estimatedArrival: estimatedArrival,
                         ),
                         const SizedBox(height: AppSpacing.lg),
@@ -88,7 +113,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.sm),
                         _OrderActionButton(
                           label: 'View order details',
-                          onTap: () {},
+                          onTap: () => _viewOrderDetails(context, ref),
                         ),
                         const SizedBox(height: AppSpacing.md),
                       ],
@@ -103,10 +128,61 @@ class OrderConfirmationScreen extends ConsumerWidget {
     );
   }
 
-  static String? _orderReference(String? orderId) {
-    final value = orderId?.trim();
-    if (value == null || value.isEmpty) return null;
-    return value.split('/').last;
+  void _viewOrderDetails(BuildContext context, WidgetRef ref) {
+    final orderId = completion?.orderId?.trim();
+    if (orderId == null || orderId.isEmpty) {
+      _showDetailsMessage(context, 'Order details are not available yet.');
+      return;
+    }
+    if (!ref.read(isCustomerAccountAuthenticatedProvider)) {
+      _showDetailsMessage(
+        context,
+        'Order details will be available after account integration.',
+      );
+      return;
+    }
+    context.push('/account/orders/details', extra: orderId);
+  }
+
+  static int? _resolvedItemCount(CustomerOrderDetails? order) {
+    if (order == null) return null;
+    return order.lineItems.fold<int>(
+      0,
+      (total, lineItem) => total + lineItem.quantity,
+    );
+  }
+
+  static String? _orderNumber(CustomerOrderDetails? order) {
+    final name = order?.name.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final confirmationNumber = order?.confirmationNumber?.trim();
+    return confirmationNumber == null || confirmationNumber.isEmpty
+        ? null
+        : confirmationNumber;
+  }
+
+  static String? _estimatedArrivalLabel(
+    BuildContext context,
+    CustomerOrderDetails? order,
+  ) {
+    final estimatedArrivalDates =
+        order?.fulfillments
+            .map((fulfillment) => fulfillment.estimatedDeliveryAt)
+            .whereType<DateTime>()
+            .toList()
+          ?..sort();
+    if (estimatedArrivalDates == null || estimatedArrivalDates.isEmpty) {
+      return null;
+    }
+    return MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(estimatedArrivalDates.first.toLocal());
+  }
+
+  static void _showDetailsMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -152,6 +228,7 @@ class _SuccessMessage extends StatelessWidget {
 class _OrderSummary extends StatelessWidget {
   const _OrderSummary({
     required this.orderReference,
+    required this.isLoadingOrderMetadata,
     required this.itemCount,
     required this.total,
     required this.currencyCode,
@@ -159,6 +236,7 @@ class _OrderSummary extends StatelessWidget {
   });
 
   final String? orderReference;
+  final bool isLoadingOrderMetadata;
   final int? itemCount;
   final double? total;
   final String? currencyCode;
@@ -179,15 +257,13 @@ class _OrderSummary extends StatelessWidget {
       ),
       child: Column(
         children: [
-          if (orderReference != null) ...[
+          if (orderReference != null || isLoadingOrderMetadata) ...[
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: _SummaryRow(
-                label: orderReference!.startsWith('#')
-                    ? 'Order number'
-                    : 'Order reference',
-                value: orderReference!,
-                emphasized: true,
+                label: 'Order number',
+                value: orderReference ?? 'Loading...',
+                emphasized: orderReference != null,
               ),
             ),
             const Divider(height: 1, color: AppColors.borderLight),

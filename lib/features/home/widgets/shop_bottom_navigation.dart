@@ -178,7 +178,7 @@ class _NavigationItem extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (badgeCount != null && badgeCount! > 0)
+                      if (badgeCount != null)
                         Positioned(
                           left: constraints.maxWidth / 2 + 4.5,
                           top: -4,

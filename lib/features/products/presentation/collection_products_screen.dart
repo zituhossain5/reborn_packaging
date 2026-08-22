@@ -7,6 +7,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../cart/state/cart_controller.dart';
+import '../../cart/widgets/cart_add_feedback.dart';
 import '../../home/widgets/delivery_banner.dart';
 import '../../home/widgets/home_header.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
@@ -154,6 +155,7 @@ class CollectionProductsScreen extends ConsumerWidget {
     if (!context.mounted) return;
     switch (result) {
       case ProductQuickAddResult.added:
+        showAddedToCartFeedback(context);
         return;
       case ProductQuickAddResult.requiresOptionSelection:
         _openProduct(context, product);

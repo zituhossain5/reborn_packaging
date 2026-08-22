@@ -11,6 +11,12 @@ import 'package:reborn_packaging/features/checkout/services/shopify_checkout_lau
 import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
 import 'package:reborn_packaging/features/cart/data/cart_id_store.dart';
 import 'package:reborn_packaging/features/cart/data/shopify_cart_repository.dart';
+import 'package:reborn_packaging/features/account/data/customer_order_repository.dart';
+import 'package:reborn_packaging/features/account/models/customer_order_details.dart';
+import 'package:reborn_packaging/features/account/state/customer_order_details_provider.dart';
+import 'package:reborn_packaging/features/auth/data/customer_auth_repository.dart';
+import 'package:reborn_packaging/features/auth/models/customer_auth_session.dart';
+import 'package:reborn_packaging/features/auth/state/customer_auth_controller.dart';
 
 import 'support/fake_cart.dart';
 
@@ -81,7 +87,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Order placed!'), findsOneWidget);
-    expect(find.text('20843'), findsOneWidget);
+    expect(find.text('20843'), findsNothing);
+    expect(find.text('Order reference'), findsNothing);
     expect(find.text('#RP-20843'), findsNothing);
     final confirmationContext = tester.element(find.text('Order placed!'));
     expect(
@@ -92,6 +99,123 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'completed checkout shows real Shopify order metadata and estimated arrival when signed in',
+    (tester) async {
+      _configureViewport(tester);
+      final router = _router();
+      final checkoutLauncher = _FakeShopifyCheckoutLauncher(
+        result: const ShopifyCheckoutResult.completed(
+          ShopifyCheckoutCompletion(
+            orderId: 'gid://shopify/Order/20843',
+            itemCount: 1,
+            totalAmount: 71.93,
+            currencyCode: 'GBP',
+          ),
+        ),
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerAuthRepositoryProvider.overrideWithValue(
+              _SignedInCustomerAuthRepository(),
+            ),
+            customerOrderRepositoryProvider.overrideWithValue(
+              _FakeCustomerOrderRepository(
+                order: _customerOrderDetails(
+                  name: '#1182',
+                  confirmationNumber: 'CNF1182',
+                  totalAmount: 120.64,
+                  lineItemQuantities: const [1, 2],
+                  estimatedDeliveryAt: DateTime.utc(2026, 7, 26),
+                ),
+              ),
+            ),
+            cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+            cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+            shopifyCheckoutLauncherProvider.overrideWithValue(checkoutLauncher),
+          ],
+          child: _SeededCheckoutApp(router: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Proceed to checkout'));
+      await tester.pumpAndSettle();
+
+      final confirmationContext = tester.element(find.text('Order placed!'));
+      final estimatedArrival = MaterialLocalizations.of(
+        confirmationContext,
+      ).formatMediumDate(DateTime.utc(2026, 7, 26).toLocal());
+
+      expect(find.text('Order number'), findsOneWidget);
+      expect(find.text('#1182'), findsOneWidget);
+      expect(find.text('3 products'), findsOneWidget);
+      expect(find.text('\u00A3120.64'), findsOneWidget);
+      expect(find.text('Estimated arrival'), findsOneWidget);
+      expect(find.text(estimatedArrival), findsOneWidget);
+      expect(find.text('20843'), findsNothing);
+      expect(find.text('gid://shopify/Order/20843'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'completed checkout hides estimated arrival when Shopify does not provide it',
+    (tester) async {
+      _configureViewport(tester);
+      final router = _router();
+      final checkoutLauncher = _FakeShopifyCheckoutLauncher(
+        result: const ShopifyCheckoutResult.completed(
+          ShopifyCheckoutCompletion(
+            orderId: 'gid://shopify/Order/20843',
+            itemCount: 1,
+            totalAmount: 71.93,
+            currencyCode: 'GBP',
+          ),
+        ),
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerAuthRepositoryProvider.overrideWithValue(
+              _SignedInCustomerAuthRepository(),
+            ),
+            customerOrderRepositoryProvider.overrideWithValue(
+              _FakeCustomerOrderRepository(
+                order: _customerOrderDetails(
+                  name: '#1182',
+                  confirmationNumber: 'CNF1182',
+                  totalAmount: 120.64,
+                  lineItemQuantities: const [1, 2],
+                ),
+              ),
+            ),
+            cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+            cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+            shopifyCheckoutLauncherProvider.overrideWithValue(checkoutLauncher),
+          ],
+          child: _SeededCheckoutApp(router: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Proceed to checkout'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Order number'), findsOneWidget);
+      expect(find.text('#1182'), findsOneWidget);
+      expect(find.text('3 products'), findsOneWidget);
+      expect(find.text('\u00A3120.64'), findsOneWidget);
+      expect(find.text('Estimated arrival'), findsNothing);
+      expect(find.text('20843'), findsNothing);
+      expect(find.text('gid://shopify/Order/20843'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('checkout summary, form validation, and fixed CTA work', (
     tester,
@@ -179,6 +303,97 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('authenticated order details tap opens native details route', (
+    tester,
+  ) async {
+    _configureViewport(tester);
+    final router = _orderConfirmationRouter(
+      completion: const ShopifyCheckoutCompletion(
+        orderId: 'gid://shopify/Order/20843',
+      ),
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          isCustomerAccountAuthenticatedProvider.overrideWithValue(true),
+          customerAuthRepositoryProvider.overrideWithValue(
+            _SignedInCustomerAuthRepository(),
+          ),
+          customerOrderRepositoryProvider.overrideWithValue(
+            _FakeCustomerOrderRepository(order: _customerOrderDetails()),
+          ),
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View order details'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Native order details'), findsOneWidget);
+    expect(find.text('gid://shopify/Order/20843'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unauthenticated order details tap shows safe fallback', (
+    tester,
+  ) async {
+    _configureViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          isCustomerAccountAuthenticatedProvider.overrideWithValue(false),
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+        ],
+        child: const MaterialApp(
+          home: OrderConfirmationScreen(
+            completion: ShopifyCheckoutCompletion(
+              orderId: 'gid://shopify/Order/20843',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View order details'));
+    await tester.pump();
+
+    expect(
+      find.text('Order details will be available after account integration.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('missing order ID shows safe fallback', (tester) async {
+    _configureViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          isCustomerAccountAuthenticatedProvider.overrideWithValue(true),
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+        ],
+        child: const MaterialApp(
+          home: OrderConfirmationScreen(
+            completion: ShopifyCheckoutCompletion(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View order details'));
+    await tester.pump();
+
+    expect(find.text('Order details are not available yet.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _FakeShopifyCheckoutLauncher implements ShopifyCheckoutLauncher {
@@ -195,6 +410,41 @@ class _FakeShopifyCheckoutLauncher implements ShopifyCheckoutLauncher {
     presentCalls++;
     lastCheckoutUrl = checkoutUrl;
     return result;
+  }
+}
+
+class _SignedInCustomerAuthRepository implements CustomerAuthRepository {
+  @override
+  Future<CustomerAuthSession?> restoreSession() async {
+    return CustomerAuthSession(
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      idToken: 'id-token',
+      expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+    );
+  }
+
+  @override
+  Future<CustomerAuthSession> signIn({String? loginHint}) async {
+    final session = await restoreSession();
+    return session!;
+  }
+
+  @override
+  Future<void> signOut(CustomerAuthSession? session) async {}
+}
+
+class _FakeCustomerOrderRepository implements CustomerOrderRepository {
+  const _FakeCustomerOrderRepository({required this.order});
+
+  final CustomerOrderDetails order;
+
+  @override
+  Future<CustomerOrderDetails> fetchOrder({
+    required String orderId,
+    required String accessToken,
+  }) async {
+    return order;
   }
 }
 
@@ -255,6 +505,32 @@ GoRouter _router({String initialLocation = '/cart'}) {
   );
 }
 
+GoRouter _orderConfirmationRouter({
+  required ShopifyCheckoutCompletion completion,
+}) {
+  return GoRouter(
+    initialLocation: '/checkout/confirmation',
+    routes: [
+      GoRoute(
+        path: '/checkout/confirmation',
+        builder: (context, state) =>
+            OrderConfirmationScreen(completion: completion),
+      ),
+      GoRoute(
+        path: '/account/orders/details',
+        builder: (context, state) => Scaffold(
+          body: Column(
+            children: [
+              const Text('Native order details'),
+              Text(state.extra as String),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
 Future<void> _enter(WidgetTester tester, String key, String value) async {
   final finder = find.byKey(ValueKey(key));
   await tester.ensureVisible(finder);
@@ -272,4 +548,39 @@ void _configureViewport(WidgetTester tester) {
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPadding);
   addTearDown(tester.view.resetViewPadding);
+}
+
+CustomerOrderDetails _customerOrderDetails({
+  String name = '#1182',
+  String? confirmationNumber = 'CNF1182',
+  double totalAmount = 120.64,
+  List<int> lineItemQuantities = const [1],
+  DateTime? estimatedDeliveryAt,
+}) {
+  return CustomerOrderDetails(
+    id: 'gid://shopify/Order/20843',
+    name: name,
+    confirmationNumber: confirmationNumber,
+    createdAt: DateTime.utc(2026, 7, 24),
+    financialStatus: 'PAID',
+    fulfillmentStatus: 'UNFULFILLED',
+    lineItems: [
+      for (var i = 0; i < lineItemQuantities.length; i++)
+        CustomerOrderLineItem(
+          id: 'line-$i',
+          name: 'Test product $i',
+          quantity: lineItemQuantities[i],
+        ),
+    ],
+    totalPrice: ShopifyOrderMoney(amount: totalAmount, currencyCode: 'GBP'),
+    shippingAddress: null,
+    fulfillments: [
+      if (estimatedDeliveryAt != null)
+        CustomerOrderFulfillment(
+          id: 'fulfillment-1',
+          estimatedDeliveryAt: estimatedDeliveryAt,
+          trackingInformation: const [],
+        ),
+    ],
+  );
 }

@@ -7,6 +7,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../cart/state/cart_controller.dart';
+import '../../cart/widgets/cart_add_feedback.dart';
 import '../../home/widgets/home_header.dart';
 import '../models/product_details.dart';
 import '../state/product_selection_controller.dart';
@@ -55,6 +56,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         bottomNavigationBar: ProductBottomBar(
           totalPrice: _selection.totalPrice,
           enabled: _selectedVariant.isAvailable && !cart.isMutating,
+          isLoading: cart.isMutating,
           onAddToCart: _addToCart,
         ),
         body: SafeArea(
@@ -225,7 +227,10 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           variant: _selectedVariant,
           quantity: _selection.quantity,
         );
-    if (!added && mounted) {
+    if (!mounted) return;
+    if (added) {
+      showAddedToCartFeedback(context);
+    } else {
       final message = ref.read(cartControllerProvider).errorMessage;
       if (message != null) {
         ScaffoldMessenger.of(

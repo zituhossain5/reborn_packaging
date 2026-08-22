@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -24,7 +25,7 @@ class ProductCard extends StatelessWidget {
 
   final ProductItem product;
   final VoidCallback? onTap;
-  final VoidCallback? onAddToCart;
+  final FutureOr<void> Function()? onAddToCart;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +83,7 @@ class ProductCard extends StatelessWidget {
               key: ValueKey('product_card_add_to_cart_${product.handle}'),
               label: 'Add ${product.title} to cart',
               enabled: product.availableForSale,
-              onTap: onAddToCart ?? () {},
+              onTap: onAddToCart,
             ),
           ),
         ],
@@ -191,13 +192,13 @@ class _AddToCartButton extends StatefulWidget {
   const _AddToCartButton({
     required this.label,
     required this.enabled,
-    required this.onTap,
+    this.onTap,
     super.key,
   });
 
   final String label;
   final bool enabled;
-  final VoidCallback onTap;
+  final FutureOr<void> Function()? onTap;
 
   @override
   State<_AddToCartButton> createState() => _AddToCartButtonState();
@@ -205,19 +206,26 @@ class _AddToCartButton extends StatefulWidget {
 
 class _AddToCartButtonState extends State<_AddToCartButton> {
   var _pressed = false;
+  var _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      enabled: widget.enabled,
-      label: widget.label,
+      enabled: widget.enabled && !_isLoading,
+      label: _isLoading ? 'Adding to cart' : widget.label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.enabled ? widget.onTap : null,
-        onTapDown: widget.enabled ? (_) => _setPressed(true) : null,
-        onTapUp: widget.enabled ? (_) => _setPressed(false) : null,
-        onTapCancel: widget.enabled ? () => _setPressed(false) : null,
+        onTap: widget.enabled && !_isLoading ? _handleTap : null,
+        onTapDown: widget.enabled && !_isLoading
+            ? (_) => _setPressed(true)
+            : null,
+        onTapUp: widget.enabled && !_isLoading
+            ? (_) => _setPressed(false)
+            : null,
+        onTapCancel: widget.enabled && !_isLoading
+            ? () => _setPressed(false)
+            : null,
         child: AnimatedScale(
           scale: _pressed ? 0.94 : 1,
           duration: const Duration(milliseconds: 90),
@@ -230,23 +238,51 @@ class _AddToCartButtonState extends State<_AddToCartButton> {
               color: AppColors.primary,
               borderRadius: BorderRadius.all(Radius.circular(8)),
             ),
-            child: SizedBox.square(
-              dimension: ProductCard._bagIconSize,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(1.125, 1.125, 1.125, 2.8125),
-                child: SvgPicture.asset(
-                  'assets/icons/add_to_cart_bag.svg',
-                  colorFilter: const ColorFilter.mode(
-                    AppColors.white,
-                    BlendMode.srcIn,
+            child: _isLoading
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(
+                      color: AppColors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : SizedBox.square(
+                    dimension: ProductCard._bagIconSize,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        1.125,
+                        1.125,
+                        1.125,
+                        2.8125,
+                      ),
+                      child: SvgPicture.asset(
+                        'assets/icons/add_to_cart_bag.svg',
+                        colorFilter: const ColorFilter.mode(
+                          AppColors.white,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _handleTap() async {
+    final onTap = widget.onTap;
+    if (onTap == null || _isLoading) return;
+
+    setState(() {
+      _pressed = false;
+      _isLoading = true;
+    });
+    try {
+      await onTap();
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _setPressed(bool pressed) {

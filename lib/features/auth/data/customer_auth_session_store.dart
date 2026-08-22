@@ -7,7 +7,9 @@ import '../models/customer_auth_session.dart';
 class CustomerAuthSessionStore {
   const CustomerAuthSessionStore({
     FlutterSecureStorage storage = const FlutterSecureStorage(),
-  }) : _storage = storage;
+  }) : this._(storage);
+
+  const CustomerAuthSessionStore._(this._storage);
 
   static const _sessionKey = 'shopify_customer_account_session';
   final FlutterSecureStorage _storage;
@@ -26,7 +28,10 @@ class CustomerAuthSessionStore {
   }
 
   Future<void> write(CustomerAuthSession session) {
-    return _storage.write(key: _sessionKey, value: jsonEncode(session.toJson()));
+    return _storage.write(
+      key: _sessionKey,
+      value: jsonEncode(session.toJson()),
+    );
   }
 
   Future<void> clear() => _storage.delete(key: _sessionKey);

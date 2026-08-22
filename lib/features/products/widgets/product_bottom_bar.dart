@@ -10,12 +10,14 @@ class ProductBottomBar extends StatelessWidget {
     required this.totalPrice,
     required this.onAddToCart,
     this.enabled = true,
+    this.isLoading = false,
     super.key,
   });
 
   final double totalPrice;
   final VoidCallback onAddToCart;
   final bool enabled;
+  final bool isLoading;
 
   static const contentHeight = 56.0;
 
@@ -76,11 +78,11 @@ class ProductBottomBar extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     button: true,
-                    enabled: enabled,
-                    label: 'Add to cart',
+                    enabled: enabled && !isLoading,
+                    label: isLoading ? 'Adding to cart' : 'Add to cart',
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: enabled ? onAddToCart : null,
+                      onTap: enabled && !isLoading ? onAddToCart : null,
                       child: Container(
                         height: 44,
                         alignment: Alignment.center,
@@ -93,20 +95,29 @@ class ProductBottomBar extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SizedBox(
-                              width: 17.5,
-                              height: 15.625,
-                              child: SvgPicture.asset(
-                                'assets/icons/add_to_cart_bag.svg',
-                                colorFilter: const ColorFilter.mode(
-                                  AppColors.white,
-                                  BlendMode.srcIn,
+                            if (isLoading)
+                              const SizedBox.square(
+                                dimension: 16,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            else
+                              SizedBox(
+                                width: 17.5,
+                                height: 15.625,
+                                child: SvgPicture.asset(
+                                  'assets/icons/add_to_cart_bag.svg',
+                                  colorFilter: const ColorFilter.mode(
+                                    AppColors.white,
+                                    BlendMode.srcIn,
+                                  ),
                                 ),
                               ),
-                            ),
                             const SizedBox(width: AppSpacing.compact),
-                            const Text(
-                              'ADD TO CART',
+                            Text(
+                              isLoading ? 'ADDING...' : 'ADD TO CART',
                               style: AppTypography.bottomBarButton,
                             ),
                           ],
