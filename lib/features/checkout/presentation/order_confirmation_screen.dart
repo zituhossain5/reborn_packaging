@@ -8,7 +8,6 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/formatters/money_formatter.dart';
-import '../../cart/models/cart_summary.dart';
 import '../../cart/state/cart_controller.dart';
 import '../../account/models/customer_order_details.dart';
 import '../../account/state/customer_order_details_provider.dart';
@@ -16,54 +15,29 @@ import '../../auth/state/post_login_intent.dart';
 import '../services/shopify_checkout_launcher.dart';
 
 class OrderConfirmationScreen extends ConsumerWidget {
-  const OrderConfirmationScreen({super.key, this.completion});
+  const OrderConfirmationScreen({super.key, required this.completion});
 
-  final ShopifyCheckoutCompletion? completion;
-
-  static const _mockOrderNumber = '#RP-20843';
-  static const _estimatedArrival = 'Tomorrow by 5PM';
+  final ShopifyCheckoutCompletion completion;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartControllerProvider);
-    final mockItemCount = cart.items.fold<int>(
-      0,
-      (total, item) => total + item.quantity,
-    );
-    final summary = CartSummary.calculate(
-      items: cart.items,
-      requestedDiscount: cart.discountAmount,
-    );
-    final isRealCheckout = completion != null;
-    final orderId = completion?.orderId?.trim();
+    final orderId = completion.orderId?.trim();
     final isAuthenticated = ref.watch(isCustomerAccountAuthenticatedProvider);
     final canLoadOrderDetails =
-        isRealCheckout &&
-        orderId != null &&
-        orderId.isNotEmpty &&
-        isAuthenticated;
-    final isGuestCheckout = isRealCheckout && !isAuthenticated;
+        orderId != null && orderId.isNotEmpty && isAuthenticated;
+    final isGuestCheckout = !isAuthenticated;
     final orderDetails = canLoadOrderDetails
         ? ref.watch(customerOrderDetailsProvider(orderId))
         : null;
     final resolvedOrder = orderDetails?.value;
-    final itemCount = isRealCheckout
-        ? _resolvedItemCount(resolvedOrder) ?? completion!.itemCount
-        : mockItemCount;
-    final total = isRealCheckout
-        ? resolvedOrder?.totalPrice.amount ?? completion!.totalAmount
-        : summary.total;
-    final currencyCode = isRealCheckout
-        ? resolvedOrder?.totalPrice.currencyCode ?? completion?.currencyCode
-        : completion?.currencyCode;
+    final itemCount = _resolvedItemCount(resolvedOrder) ?? completion.itemCount;
+    final total = resolvedOrder?.totalPrice.amount ?? completion.totalAmount;
+    final currencyCode =
+        resolvedOrder?.totalPrice.currencyCode ?? completion.currencyCode;
     // Checkout Kit's order ID is authoritative for API lookup but is not the
     // customer-facing Shopify order name (for example, #1182).
-    final orderReference = isRealCheckout
-        ? _orderNumber(resolvedOrder)
-        : _mockOrderNumber;
-    final estimatedArrival = isRealCheckout
-        ? _estimatedArrivalLabel(context, resolvedOrder)
-        : _estimatedArrival;
+    final orderReference = _orderNumber(resolvedOrder);
+    final estimatedArrival = _estimatedArrivalLabel(context, resolvedOrder);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -93,7 +67,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         SizedBox(height: topSpacing),
-                        _SuccessMessage(realCheckout: isRealCheckout),
+                        const _SuccessMessage(),
                         const SizedBox(height: AppSpacing.md),
                         _OrderSummary(
                           orderReference: orderReference,
@@ -229,9 +203,7 @@ class _GuestOrderDetailsNotice extends StatelessWidget {
 }
 
 class _SuccessMessage extends StatelessWidget {
-  const _SuccessMessage({required this.realCheckout});
-
-  final bool realCheckout;
+  const _SuccessMessage();
 
   @override
   Widget build(BuildContext context) {
@@ -255,10 +227,7 @@ class _SuccessMessage extends StatelessWidget {
         const Text('Order placed!', style: AppTypography.orderPlacedTitle),
         const SizedBox(height: AppSpacing.tiny),
         Text(
-          realCheckout
-              ? 'Your order has been confirmed.'
-              : 'Your order has been confirmed and will be dispatched '
-                    'for next-day delivery.',
+          'Your order has been confirmed.',
           textAlign: TextAlign.center,
           style: AppTypography.orderConfirmation,
         ),

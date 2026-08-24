@@ -1,5 +1,5 @@
-import '../models/product_details.dart';
-import '../models/product_item.dart';
+import 'package:reborn_packaging/features/products/models/product_details.dart';
+import 'package:reborn_packaging/features/products/models/product_item.dart';
 import 'mock_products.dart';
 
 const _sizes = ['500ml', '650ml', '750ml', '1000ml'];

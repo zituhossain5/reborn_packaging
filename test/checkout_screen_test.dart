@@ -8,7 +8,7 @@ import 'package:reborn_packaging/features/checkout/presentation/checkout_screen.
 import 'package:reborn_packaging/features/checkout/presentation/payment_screen.dart';
 import 'package:reborn_packaging/features/checkout/presentation/order_confirmation_screen.dart';
 import 'package:reborn_packaging/features/checkout/services/shopify_checkout_launcher.dart';
-import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
+import 'support/mock_product_details.dart';
 import 'package:reborn_packaging/features/cart/data/cart_id_store.dart';
 import 'package:reborn_packaging/features/cart/data/shopify_cart_repository.dart';
 import 'package:reborn_packaging/features/account/data/customer_order_repository.dart';
@@ -308,7 +308,7 @@ void main() {
     await tester.tap(find.text('Pay now — £71.93'));
     await tester.pumpAndSettle();
     expect(find.text('Order placed!'), findsOneWidget);
-    expect(find.text('#RP-20843'), findsOneWidget);
+    expect(find.text('#RP-20843'), findsNothing);
     expect(find.text('1 product'), findsOneWidget);
     expect(find.text('£71.93'), findsOneWidget);
 
@@ -791,7 +791,13 @@ GoRouter _router({String initialLocation = '/cart'}) {
       GoRoute(
         path: '/checkout/confirmation',
         builder: (context, state) => OrderConfirmationScreen(
-          completion: state.extra as ShopifyCheckoutCompletion?,
+          completion:
+              state.extra as ShopifyCheckoutCompletion? ??
+              const ShopifyCheckoutCompletion(
+                itemCount: 1,
+                totalAmount: 71.93,
+                currencyCode: 'GBP',
+              ),
         ),
       ),
       GoRoute(

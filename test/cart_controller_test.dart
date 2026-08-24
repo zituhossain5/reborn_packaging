@@ -5,7 +5,7 @@ import 'package:reborn_packaging/features/cart/data/cart_id_store.dart';
 import 'package:reborn_packaging/features/cart/data/shopify_cart_repository.dart';
 import 'package:reborn_packaging/features/cart/state/cart_controller.dart';
 import 'package:reborn_packaging/features/cart/widgets/cart_quantity_badge.dart';
-import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
+import 'support/mock_product_details.dart';
 
 import 'support/fake_cart.dart';
 

@@ -8,6 +8,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../auth/presentation/login_screen.dart';
 import '../../auth/state/customer_auth_controller.dart';
+import '../../auth/state/post_login_intent.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
 import '../models/account_models.dart';
 import '../state/customer_orders_provider.dart';
@@ -122,6 +123,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                               .read(customerAuthControllerProvider.notifier)
                               .signOut();
                           ref.invalidate(customerProfileProvider);
+                          ref.invalidate(customerOrdersProvider);
+                          ref
+                              .read(pendingPostLoginIntentProvider.notifier)
+                              .clear();
                           if (!context.mounted) return;
                           context.go('/login');
                         },

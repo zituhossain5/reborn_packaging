@@ -1,7 +1,7 @@
 import 'package:reborn_packaging/features/cart/data/cart_id_store.dart';
 import 'package:reborn_packaging/features/cart/data/shopify_cart_repository.dart';
 import 'package:reborn_packaging/features/cart/models/shopify_cart.dart';
-import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
+import 'mock_product_details.dart';
 
 class MemoryCartIdStore implements CartIdStore {
   String? value;

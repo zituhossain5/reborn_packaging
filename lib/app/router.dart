@@ -2,8 +2,6 @@ import 'package:go_router/go_router.dart';
 
 import '../features/home/presentation/home_screen.dart';
 import '../features/cart/presentation/cart_screen.dart';
-import '../features/checkout/presentation/checkout_screen.dart';
-import '../features/checkout/presentation/payment_screen.dart';
 import '../features/checkout/presentation/order_confirmation_screen.dart';
 import '../features/checkout/services/shopify_checkout_launcher.dart';
 import '../features/products/presentation/collection_products_screen.dart';
@@ -21,11 +19,7 @@ abstract final class AppRoutes {
   static const productDetails = '/products/:handle';
   static const cart = '/cart';
   static const search = '/search';
-  // Design-only mock routes. Production Cart checkout opens Shopify's
-  // checkoutUrl in the platform browser and does not navigate to these routes.
-  static const mockCheckoutDelivery = '/checkout';
-  static const mockCheckoutPayment = '/checkout/payment';
-  static const mockCheckoutConfirmation = '/checkout/confirmation';
+  static const checkoutConfirmation = '/checkout/confirmation';
   static const login = '/login';
   static const account = '/account';
   static const orderDetails = '/account/orders/details';
@@ -70,17 +64,11 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SearchScreen(),
     ),
     GoRoute(
-      path: AppRoutes.mockCheckoutDelivery,
-      builder: (context, state) => const CheckoutScreen(),
-    ),
-    GoRoute(
-      path: AppRoutes.mockCheckoutPayment,
-      builder: (context, state) => const PaymentScreen(),
-    ),
-    GoRoute(
-      path: AppRoutes.mockCheckoutConfirmation,
+      path: AppRoutes.checkoutConfirmation,
+      redirect: (context, state) =>
+          state.extra is ShopifyCheckoutCompletion ? null : AppRoutes.cart,
       builder: (context, state) => OrderConfirmationScreen(
-        completion: state.extra as ShopifyCheckoutCompletion?,
+        completion: state.extra! as ShopifyCheckoutCompletion,
       ),
     ),
     GoRoute(

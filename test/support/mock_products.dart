@@ -1,4 +1,4 @@
-import '../models/product_item.dart';
+import 'package:reborn_packaging/features/products/models/product_item.dart';
 
 const mockProductCatalog = <ProductItem>[
   ProductItem(

@@ -21,6 +21,8 @@ class PendingPostLoginIntentController extends Notifier<PostLoginIntent?> {
 
   void set(PostLoginIntent intent) => state = intent;
 
+  void clear() => state = null;
+
   PostLoginIntent? consume() {
     final intent = state;
     state = null;

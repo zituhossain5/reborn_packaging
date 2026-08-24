@@ -29,6 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
+    ref.read(pendingPostLoginIntentProvider.notifier).clear();
     _emailController.dispose();
     super.dispose();
   }

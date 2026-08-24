@@ -1,4 +1,4 @@
-import '../models/collection_item.dart';
+import 'package:reborn_packaging/features/home/models/collection_item.dart';
 
 const mockCollections = <CollectionItem>[
   CollectionItem(

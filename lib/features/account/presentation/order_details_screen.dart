@@ -7,6 +7,8 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/formatters/money_formatter.dart';
+import '../../auth/presentation/login_screen.dart';
+import '../../auth/state/customer_auth_controller.dart';
 import '../data/customer_order_repository.dart';
 import '../models/customer_order_details.dart';
 import '../state/customer_order_details_provider.dart';
@@ -18,6 +20,15 @@ class OrderDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(customerAuthControllerProvider);
+    if (auth.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (auth.value == null) return const LoginScreen();
+
     final order = ref.watch(customerOrderDetailsProvider(orderId));
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -226,6 +237,14 @@ class _OrderDetailsBody extends StatelessWidget {
   }
 
   static Future<void> _openUrl(BuildContext context, Uri uri) async {
+    if (uri.scheme.toLowerCase() != 'https' || uri.host.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open this Shopify link.')),
+        );
+      }
+      return;
+    }
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

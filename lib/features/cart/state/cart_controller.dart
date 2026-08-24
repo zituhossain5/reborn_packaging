@@ -100,12 +100,6 @@ class CartController extends Notifier<CartState> {
       variant: variant,
       quantity: quantity,
     );
-    _debugVariantSelection(
-      product: product,
-      variant: variant,
-      quantity: quantity,
-      validationFailure: validationFailure,
-    );
     if (validationFailure != null) {
       _setFailure(validationFailure);
       return false;
@@ -134,7 +128,6 @@ class CartController extends Notifier<CartState> {
             );
       await _accept(cart);
       if (cart.warnings.isNotEmpty) {
-        _debugShopifyWarnings(cart.warnings);
         final message = cart.warnings
             .map((warning) => warning.message)
             .join('; ');
@@ -143,14 +136,12 @@ class CartController extends Notifier<CartState> {
       }
       return true;
     } on ShopifyUserFailure catch (failure) {
-      _debugShopifyFailure(failure);
       if (existingCart != null && failure.indicatesInvalidCart) {
         return _recreateCart(merchandiseId, quantity);
       }
       _setFailure(failure.message);
       return false;
     } on ShopifyFailure catch (failure) {
-      _debugShopifyFailure(failure);
       _setFailure(failure.message);
       return false;
     } catch (error, stackTrace) {
@@ -242,12 +233,6 @@ class CartController extends Notifier<CartState> {
       );
       final expectsAuthenticatedBuyer =
           customerAccessToken?.trim().isNotEmpty ?? false;
-      if (kDebugMode) {
-        debugPrint(
-          'buyerIdentity customer associated: '
-          '${updatedCart.hasAuthenticatedBuyer}',
-        );
-      }
       if (expectsAuthenticatedBuyer && !updatedCart.hasAuthenticatedBuyer) {
         throw const ShopifyResponseFailure(
           'Shopify could not authenticate this checkout. Please sign in again.',
@@ -256,9 +241,6 @@ class CartController extends Notifier<CartState> {
       await _accept(updatedCart);
       return true;
     } on ShopifyFailure catch (failure) {
-      if (kDebugMode) {
-        debugPrint('buyerIdentity customer associated: false');
-      }
       await _handleMutationFailure(failure);
       return false;
     } catch (error, stackTrace) {
@@ -383,28 +365,6 @@ class CartController extends Notifier<CartState> {
     return null;
   }
 
-  void _debugVariantSelection({
-    required ProductDetails product,
-    required ProductVariant variant,
-    required int quantity,
-    required String? validationFailure,
-  }) {
-    if (!kDebugMode) return;
-    debugPrint(
-      'Shopify add-to-cart selection: '
-      'handle=${product.handle}, '
-      'variantId=${variant.id}, '
-      'variantTitle=${variant.title}, '
-      'availableForSale=${variant.availableForSale}, '
-      'quantityAvailable=${variant.quantityAvailable}, '
-      'minimum=${variant.quantityRule.minimum}, '
-      'maximum=${variant.quantityRule.maximum}, '
-      'increment=${variant.quantityRule.increment}, '
-      'selectedQuantity=$quantity, '
-      'validation=${validationFailure ?? 'passed'}',
-    );
-  }
-
   void _setUnexpectedFailure({
     required String action,
     required Object error,
@@ -415,35 +375,22 @@ class CartController extends Notifier<CartState> {
       debugPrint('Unexpected Shopify cart error: $safeError');
       debugPrintStack(stackTrace: stackTrace);
     }
-    _setFailure(
-      safeError.isEmpty
-          ? 'Unable to $action.'
-          : 'Unable to $action: $safeError',
-    );
+    _setFailure('Unable to $action. Please try again.');
   }
 
   String _redactCartIds(String value) {
-    return value.replaceAll(
-      RegExp(r'''gid://shopify/Cart/[^\s"']+'''),
-      '[redacted Shopify cart ID]',
-    );
-  }
-
-  void _debugShopifyFailure(ShopifyFailure failure) {
-    if (!kDebugMode) return;
-    debugPrint(
-      'Shopify cart failure (${failure.runtimeType}): '
-      '${_redactCartIds(failure.message)}',
-    );
-  }
-
-  void _debugShopifyWarnings(List<ShopifyCartWarning> warnings) {
-    if (!kDebugMode) return;
-    for (final warning in warnings) {
-      debugPrint(
-        'Shopify cart warning: code=${warning.code}, '
-        'target=${warning.target}, message=${warning.message}',
-      );
-    }
+    return value
+        .replaceAll(
+          RegExp(r'''gid://shopify/Cart/[^\s"']+'''),
+          '[redacted Shopify cart ID]',
+        )
+        .replaceAll(RegExp(r'https?://\S+'), '[redacted URL]')
+        .replaceAll(
+          RegExp(
+            r'(token|code|verifier|key)=([^&\s]+)',
+            caseSensitive: false,
+          ),
+          r'$1=[redacted]',
+        );
   }
 }

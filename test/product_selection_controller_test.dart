@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reborn_packaging/features/products/data/mock_product_details.dart';
+import 'support/mock_product_details.dart';
 import 'package:reborn_packaging/features/products/models/product_details.dart';
 import 'package:reborn_packaging/features/products/state/product_selection_controller.dart';
 
