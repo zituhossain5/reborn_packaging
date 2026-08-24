@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 
 import '../config/customer_account_config.dart';
@@ -67,10 +68,7 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
           _config.redirectUri!.toString(),
           serviceConfiguration: _serviceConfiguration(discovery),
           scopes: _config.scopes,
-          additionalParameters: {
-            if (loginHint != null && loginHint.trim().isNotEmpty)
-              'login_hint': loginHint.trim(),
-          },
+          loginHint: _normalizedLoginHint(loginHint),
         ),
       );
       final session = _sessionFromResponse(
@@ -83,6 +81,13 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
       return session;
     } on FlutterAppAuthUserCancelledException {
       throw const CustomerAuthCanceledException();
+    } on FlutterAppAuthPlatformException catch (error) {
+      if (kDebugMode) {
+        throw CustomerAuthException(_safeAppAuthFailure(error));
+      }
+      throw const CustomerAuthException(
+        'Shopify sign in could not be completed. Please try again.',
+      );
     } on CustomerAuthException {
       rethrow;
     } catch (_) {
@@ -90,6 +95,30 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
         'Shopify sign in could not be completed. Please try again.',
       );
     }
+  }
+
+  String? _normalizedLoginHint(String? value) {
+    final normalized = value?.trim();
+    return normalized == null || normalized.isEmpty ? null : normalized;
+  }
+
+  String _safeAppAuthFailure(FlutterAppAuthPlatformException exception) {
+    final details = exception.platformErrorDetails;
+    final code = details.error ?? details.code ?? exception.code;
+    final rawDescription = details.errorDescription ?? exception.message;
+    final description = rawDescription
+        ?.replaceAll(RegExp(r'https?://\S+'), '[redacted URL]')
+        .replaceAllMapped(
+          RegExp(
+            r'(code|token|verifier|state|redirect_uri)=[^&\s]+',
+            caseSensitive: false,
+          ),
+          (match) => '${match.group(1)}=[redacted]',
+        )
+        .trim();
+    return description == null || description.isEmpty
+        ? 'Shopify sign in failed ($code).'
+        : 'Shopify sign in failed ($code): $description';
   }
 
   @override

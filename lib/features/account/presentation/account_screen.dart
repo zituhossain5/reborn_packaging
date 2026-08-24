@@ -10,6 +10,7 @@ import '../../auth/presentation/login_screen.dart';
 import '../../auth/state/customer_auth_controller.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
 import '../models/account_models.dart';
+import '../state/customer_profile_provider.dart';
 import '../state/mock_account_state.dart';
 import '../widgets/account_profile.dart';
 import '../widgets/account_profile_sheets.dart';
@@ -41,7 +42,50 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       return const LoginScreen();
     }
 
-    final account = ref.watch(mockAccountStateProvider);
+    final customer = ref.watch(customerProfileProvider);
+    if (customer.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.white,
+        bottomNavigationBar: ShopBottomNavigation(),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (customer.hasError) {
+      return Scaffold(
+        backgroundColor: AppColors.white,
+        bottomNavigationBar: const ShopBottomNavigation(),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    customer.error.toString(),
+                    textAlign: TextAlign.center,
+                    style: AppTypography.accountEmptyBody,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton(
+                    onPressed: () => ref.invalidate(customerProfileProvider),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final mockAccount = ref.watch(mockAccountStateProvider);
+    final account = MockAccountState(
+      user: customer.requireValue.toAccountUser(),
+      orders: mockAccount.orders,
+      addresses: mockAccount.addresses,
+      marketingEmailsEnabled: mockAccount.marketingEmailsEnabled,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -106,6 +150,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                           await ref
                               .read(customerAuthControllerProvider.notifier)
                               .signOut();
+                          ref.invalidate(customerProfileProvider);
                           if (!context.mounted) return;
                           context.go('/login');
                         },

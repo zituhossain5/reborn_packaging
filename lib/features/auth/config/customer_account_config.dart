@@ -41,8 +41,7 @@ class CustomerAccountConfig {
     final missing = <String>[
       if (storeDomain.trim().isEmpty) 'SHOPIFY_STORE_DOMAIN',
       if (clientId.trim().isEmpty) 'SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID',
-      if (redirectUri == null)
-        'SHOPIFY_CUSTOMER_ACCOUNT_REDIRECT_URI',
+      if (redirectUri == null) 'SHOPIFY_CUSTOMER_ACCOUNT_REDIRECT_URI',
     ];
     if (missing.isNotEmpty) {
       throw CustomerAuthException(

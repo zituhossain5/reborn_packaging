@@ -36,9 +36,8 @@ class OrderDetailsScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => _OrderError(
             message: error.toString(),
-            onRetry: () => ref.invalidate(
-              customerOrderDetailsProvider(orderId),
-            ),
+            onRetry: () =>
+                ref.invalidate(customerOrderDetailsProvider(orderId)),
           ),
           data: (value) => _OrderDetailsBody(order: value),
         ),
@@ -61,7 +60,10 @@ class _OrderDetailsBody extends StatelessWidget {
           children: [
             Text(order.name, style: AppTypography.accountOrdersHeading),
             const SizedBox(height: AppSpacing.xxs),
-            Text(_formatDate(order.createdAt), style: AppTypography.accountOrderMeta),
+            Text(
+              _formatDate(order.createdAt),
+              style: AppTypography.accountOrderMeta,
+            ),
             if (order.confirmationNumber != null) ...[
               const SizedBox(height: AppSpacing.sm),
               _DetailRow(
@@ -88,7 +90,10 @@ class _OrderDetailsBody extends StatelessWidget {
             for (var index = 0; index < order.lineItems.length; index++) ...[
               _LineItem(item: order.lineItems[index]),
               if (index < order.lineItems.length - 1)
-                const Divider(height: AppSpacing.lg, color: AppColors.borderLight),
+                const Divider(
+                  height: AppSpacing.lg,
+                  color: AppColors.borderLight,
+                ),
             ],
           ],
         ),
@@ -116,7 +121,10 @@ class _OrderDetailsBody extends StatelessWidget {
         ),
         if (order.shippingAddress != null) ...[
           const SizedBox(height: AppSpacing.md),
-          const Text('SHIPPING ADDRESS', style: AppTypography.accountSectionLabel),
+          const Text(
+            'SHIPPING ADDRESS',
+            style: AppTypography.accountSectionLabel,
+          ),
           const SizedBox(height: AppSpacing.xs),
           _DetailsCard(
             children: [
@@ -144,8 +152,18 @@ class _OrderDetailsBody extends StatelessWidget {
 
   static String _formatDate(DateTime value) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final local = value.toLocal();
     return '${local.day} ${months[local.month - 1]} ${local.year}';
@@ -154,7 +172,11 @@ class _OrderDetailsBody extends StatelessWidget {
   static String _humanize(String value) {
     final words = value.toLowerCase().split('_');
     return words
-        .map((word) => word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}')
+        .map(
+          (word) => word.isEmpty
+              ? word
+              : '${word[0].toUpperCase()}${word.substring(1)}',
+        )
         .join(' ');
   }
 
@@ -248,9 +270,13 @@ class _LineItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(item.name, style: AppTypography.accountProfileValue),
-              if (item.variantTitle != null && item.variantTitle != 'Default Title')
+              if (item.variantTitle != null &&
+                  item.variantTitle != 'Default Title')
                 Text(item.variantTitle!, style: AppTypography.accountOrderMeta),
-              Text('Qty ${item.quantity}', style: AppTypography.accountOrderMeta),
+              Text(
+                'Qty ${item.quantity}',
+                style: AppTypography.accountOrderMeta,
+              ),
             ],
           ),
         ),
@@ -284,9 +310,10 @@ class _FulfillmentDetails extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(
-              [tracking.company, tracking.number]
-                  .whereType<String>()
-                  .join(' - '),
+              [
+                tracking.company,
+                tracking.number,
+              ].whereType<String>().join(' - '),
               style: AppTypography.accountAddressBody,
             ),
           ),

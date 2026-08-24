@@ -11,8 +11,9 @@ class CustomerAuthSession {
   final String idToken;
   final DateTime expiresAt;
 
-  bool get isExpired =>
-      expiresAt.isBefore(DateTime.now().toUtc().add(const Duration(seconds: 30)));
+  bool get isExpired => expiresAt.isBefore(
+    DateTime.now().toUtc().add(const Duration(seconds: 30)),
+  );
 
   Map<String, Object?> toJson() => {
     'accessToken': accessToken,

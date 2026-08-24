@@ -28,9 +28,8 @@ class CustomerAuthController extends AsyncNotifier<CustomerAuthSession?> {
   Future<bool> signIn({String? loginHint}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
-      () => ref
-          .read(customerAuthRepositoryProvider)
-          .signIn(loginHint: loginHint),
+      () =>
+          ref.read(customerAuthRepositoryProvider).signIn(loginHint: loginHint),
     );
     return state.hasValue && state.value != null;
   }
@@ -38,9 +37,7 @@ class CustomerAuthController extends AsyncNotifier<CustomerAuthSession?> {
   Future<void> signOut() async {
     final currentSession = state.value;
     state = const AsyncLoading();
-    await ref
-        .read(customerAuthRepositoryProvider)
-        .signOut(currentSession);
+    await ref.read(customerAuthRepositoryProvider).signOut(currentSession);
     state = const AsyncData(null);
   }
 }

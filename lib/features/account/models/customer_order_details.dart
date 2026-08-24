@@ -24,9 +24,9 @@ class CustomerOrderDetails {
       createdAt: DateTime.parse(json['createdAt'] as String),
       financialStatus: _nullableString(json['financialStatus']),
       fulfillmentStatus: json['fulfillmentStatus'] as String,
-      lineItems: _nodes(json['lineItems'])
-          .map(CustomerOrderLineItem.fromShopifyJson)
-          .toList(growable: false),
+      lineItems: _nodes(
+        json['lineItems'],
+      ).map(CustomerOrderLineItem.fromShopifyJson).toList(growable: false),
       subtotal: ShopifyOrderMoney.fromNullableJson(json['subtotal']),
       totalShipping: ShopifyOrderMoney.fromNullableJson(json['totalShipping']),
       totalTax: ShopifyOrderMoney.fromNullableJson(json['totalTax']),
@@ -38,9 +38,9 @@ class CustomerOrderDetails {
               json['shippingAddress'] as Map<String, dynamic>,
             )
           : null,
-      fulfillments: _nodes(json['fulfillments'])
-          .map(CustomerOrderFulfillment.fromShopifyJson)
-          .toList(growable: false),
+      fulfillments: _nodes(
+        json['fulfillments'],
+      ).map(CustomerOrderFulfillment.fromShopifyJson).toList(growable: false),
       statusPageUrl: Uri.tryParse(json['statusPageUrl'] as String? ?? ''),
     );
   }
@@ -153,9 +153,7 @@ class CustomerOrderFulfillment {
     this.estimatedDeliveryAt,
   });
 
-  factory CustomerOrderFulfillment.fromShopifyJson(
-    Map<String, dynamic> json,
-  ) {
+  factory CustomerOrderFulfillment.fromShopifyJson(Map<String, dynamic> json) {
     return CustomerOrderFulfillment(
       id: json['id'] as String,
       status: _nullableString(json['status']),
@@ -163,11 +161,10 @@ class CustomerOrderFulfillment {
       estimatedDeliveryAt: json['estimatedDeliveryAt'] is String
           ? DateTime.tryParse(json['estimatedDeliveryAt'] as String)
           : null,
-      trackingInformation:
-          (json['trackingInformation'] as List? ?? const [])
-              .whereType<Map<String, dynamic>>()
-              .map(CustomerOrderTracking.fromShopifyJson)
-              .toList(growable: false),
+      trackingInformation: (json['trackingInformation'] as List? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(CustomerOrderTracking.fromShopifyJson)
+          .toList(growable: false),
     );
   }
 
