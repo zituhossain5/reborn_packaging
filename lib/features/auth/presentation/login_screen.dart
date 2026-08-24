@@ -6,9 +6,12 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../account/state/customer_order_details_provider.dart';
+import '../../account/state/customer_orders_provider.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
 import '../config/customer_account_config.dart';
 import '../state/customer_auth_controller.dart';
+import '../state/post_login_intent.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -46,6 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .signIn(loginHint: loginHint);
     if (!mounted) return;
     if (succeeded) {
+      if (await _handlePostLoginIntent()) return;
       context.go('/account');
       return;
     }
@@ -54,6 +58,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(error?.toString() ?? 'Unable to sign in.')),
     );
+  }
+
+  Future<bool> _handlePostLoginIntent() async {
+    final intent = ref
+        .read(pendingPostLoginIntentProvider.notifier)
+        .consume();
+    if (intent is! GuestOrderPostLoginIntent) return false;
+
+    ref.invalidate(customerOrdersProvider);
+    try {
+      final order = await ref.read(
+        customerOrderDetailsProvider(intent.orderId).future,
+      );
+      if (!mounted) return true;
+      context.go('/account/orders/details', extra: order.id);
+    } catch (_) {
+      if (!mounted) return true;
+      context.go('/account');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your order may take a moment to appear.')),
+      );
+    }
+    return true;
   }
 
   @override

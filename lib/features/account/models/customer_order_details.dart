@@ -13,10 +13,17 @@ class CustomerOrderDetails {
     this.subtotal,
     this.totalShipping,
     this.totalTax,
+    this.totalDiscount,
     this.statusPageUrl,
   });
 
   factory CustomerOrderDetails.fromShopifyJson(Map<String, dynamic> json) {
+    final lineItems = _nodes(
+      json['lineItems'],
+    ).map(CustomerOrderLineItem.fromShopifyJson).toList(growable: false);
+    final totalPrice = ShopifyOrderMoney.fromShopifyJson(
+      json['totalPrice'] as Map<String, dynamic>,
+    );
     return CustomerOrderDetails(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -24,15 +31,16 @@ class CustomerOrderDetails {
       createdAt: DateTime.parse(json['createdAt'] as String),
       financialStatus: _nullableString(json['financialStatus']),
       fulfillmentStatus: json['fulfillmentStatus'] as String,
-      lineItems: _nodes(
-        json['lineItems'],
-      ).map(CustomerOrderLineItem.fromShopifyJson).toList(growable: false),
+      lineItems: lineItems,
       subtotal: ShopifyOrderMoney.fromNullableJson(json['subtotal']),
       totalShipping: ShopifyOrderMoney.fromNullableJson(json['totalShipping']),
       totalTax: ShopifyOrderMoney.fromNullableJson(json['totalTax']),
-      totalPrice: ShopifyOrderMoney.fromShopifyJson(
-        json['totalPrice'] as Map<String, dynamic>,
+      totalDiscount: _totalDiscount(
+        lineItems,
+        json['shippingDiscountAllocations'],
+        totalPrice.currencyCode,
       ),
+      totalPrice: totalPrice,
       shippingAddress: json['shippingAddress'] is Map<String, dynamic>
           ? CustomerOrderAddress.fromShopifyJson(
               json['shippingAddress'] as Map<String, dynamic>,
@@ -41,7 +49,7 @@ class CustomerOrderDetails {
       fulfillments: _nodes(
         json['fulfillments'],
       ).map(CustomerOrderFulfillment.fromShopifyJson).toList(growable: false),
-      statusPageUrl: Uri.tryParse(json['statusPageUrl'] as String? ?? ''),
+      statusPageUrl: _nullableUri(json['statusPageUrl']),
     );
   }
 
@@ -55,6 +63,7 @@ class CustomerOrderDetails {
   final ShopifyOrderMoney? subtotal;
   final ShopifyOrderMoney? totalShipping;
   final ShopifyOrderMoney? totalTax;
+  final ShopifyOrderMoney? totalDiscount;
   final ShopifyOrderMoney totalPrice;
   final CustomerOrderAddress? shippingAddress;
   final List<CustomerOrderFulfillment> fulfillments;
@@ -71,6 +80,9 @@ class CustomerOrderLineItem {
     this.imageUrl,
     this.imageAltText,
     this.totalPrice,
+    this.price,
+    this.totalDiscount,
+    this.title,
   });
 
   factory CustomerOrderLineItem.fromShopifyJson(Map<String, dynamic> json) {
@@ -78,6 +90,7 @@ class CustomerOrderLineItem {
     return CustomerOrderLineItem(
       id: json['id'] as String,
       name: json['name'] as String,
+      title: _nullableString(json['title']),
       quantity: json['quantity'] as int,
       variantTitle: _nullableString(json['variantTitle']),
       sku: _nullableString(json['sku']),
@@ -88,17 +101,22 @@ class CustomerOrderLineItem {
           ? _nullableString(image['altText'])
           : null,
       totalPrice: ShopifyOrderMoney.fromNullableJson(json['totalPrice']),
+      price: ShopifyOrderMoney.fromNullableJson(json['price']),
+      totalDiscount: ShopifyOrderMoney.fromNullableJson(json['totalDiscount']),
     );
   }
 
   final String id;
   final String name;
+  final String? title;
   final int quantity;
   final String? variantTitle;
   final String? sku;
   final String? imageUrl;
   final String? imageAltText;
   final ShopifyOrderMoney? totalPrice;
+  final ShopifyOrderMoney? price;
+  final ShopifyOrderMoney? totalDiscount;
 }
 
 class ShopifyOrderMoney {
@@ -182,7 +200,7 @@ class CustomerOrderTracking {
     return CustomerOrderTracking(
       company: _nullableString(json['company']),
       number: _nullableString(json['number']),
-      url: Uri.tryParse(json['url'] as String? ?? ''),
+      url: _nullableUri(json['url']),
     );
   }
 
@@ -201,4 +219,35 @@ List<Map<String, dynamic>> _nodes(Object? connection) {
 String? _nullableString(Object? value) {
   final text = value is String ? value.trim() : '';
   return text.isEmpty ? null : text;
+}
+
+Uri? _nullableUri(Object? value) {
+  final uri = Uri.tryParse(value is String ? value.trim() : '');
+  return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty
+      ? uri
+      : null;
+}
+
+ShopifyOrderMoney? _totalDiscount(
+  List<CustomerOrderLineItem> lineItems,
+  Object? shippingAllocations,
+  String currencyCode,
+) {
+  var amount = lineItems.fold<double>(
+    0,
+    (total, item) => total + (item.totalDiscount?.amount ?? 0),
+  );
+  if (shippingAllocations is List) {
+    for (final allocation
+        in shippingAllocations.whereType<Map<String, dynamic>>()) {
+      amount +=
+          ShopifyOrderMoney.fromNullableJson(
+            allocation['allocatedAmount'],
+          )?.amount ??
+          0;
+    }
+  }
+  return amount > 0
+      ? ShopifyOrderMoney(amount: amount, currencyCode: currencyCode)
+      : null;
 }

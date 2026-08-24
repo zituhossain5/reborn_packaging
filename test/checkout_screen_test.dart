@@ -15,6 +15,7 @@ import 'package:reborn_packaging/features/account/data/customer_order_repository
 import 'package:reborn_packaging/features/account/models/customer_order_details.dart';
 import 'package:reborn_packaging/features/account/state/customer_order_details_provider.dart';
 import 'package:reborn_packaging/features/auth/data/customer_auth_repository.dart';
+import 'package:reborn_packaging/features/auth/presentation/login_screen.dart';
 import 'package:reborn_packaging/features/auth/models/customer_auth_session.dart';
 import 'package:reborn_packaging/features/auth/state/customer_auth_controller.dart';
 
@@ -326,46 +327,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('newly completed order lookup retries until Shopify resolves it', (
-    tester,
-  ) async {
-    _configureViewport(tester);
-    final repository = _EventuallyAvailableCustomerOrderRepository(
-      order: _customerOrderDetails(name: '#1186'),
-      failuresBeforeSuccess: 2,
-    );
+  testWidgets(
+    'newly completed order lookup retries until Shopify resolves it',
+    (tester) async {
+      _configureViewport(tester);
+      final repository = _EventuallyAvailableCustomerOrderRepository(
+        order: _customerOrderDetails(name: '#1186'),
+        failuresBeforeSuccess: 2,
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          customerAuthRepositoryProvider.overrideWithValue(
-            _SignedInCustomerAuthRepository(),
-          ),
-          customerOrderRepositoryProvider.overrideWithValue(repository),
-          customerOrderLookupRetryDelayProvider.overrideWithValue(
-            Duration.zero,
-          ),
-          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
-          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
-        ],
-        child: const MaterialApp(
-          home: OrderConfirmationScreen(
-            completion: ShopifyCheckoutCompletion(
-              orderId: 'gid://shopify/Order/1186',
-              itemCount: 1,
-              totalAmount: 46.07,
-              currencyCode: 'GBP',
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerAuthRepositoryProvider.overrideWithValue(
+              _GuestThenSignedInCustomerAuthRepository(),
+            ),
+            customerOrderRepositoryProvider.overrideWithValue(repository),
+            customerOrderLookupRetryDelayProvider.overrideWithValue(
+              Duration.zero,
+            ),
+            cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+            cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+          ],
+          child: const MaterialApp(
+            home: OrderConfirmationScreen(
+              completion: ShopifyCheckoutCompletion(
+                orderId: 'gid://shopify/Order/1186',
+                itemCount: 1,
+                totalAmount: 46.07,
+                currencyCode: 'GBP',
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(repository.calls, 3);
-    expect(find.text('#1186'), findsOneWidget);
-    expect(find.text('gid://shopify/Order/1186'), findsNothing);
-  });
+      expect(repository.calls, 3);
+      expect(find.text('#1186'), findsOneWidget);
+      expect(find.text('gid://shopify/Order/1186'), findsNothing);
+    },
+  );
 
   testWidgets(
     'OrderIdentity resolves through recent orders once without direct lookup',
@@ -490,9 +492,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('unauthenticated order details tap shows safe fallback', (
-    tester,
-  ) async {
+  testWidgets('guest order confirmation shows email fallback', (tester) async {
     _configureViewport(tester);
     await tester.pumpWidget(
       ProviderScope(
@@ -511,13 +511,60 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('View order details'));
-    await tester.pump();
 
     expect(
-      find.text('Order details will be available after account integration.'),
+      find.text(
+        'Your order confirmation and tracking details have been sent to your email.',
+      ),
       findsOneWidget,
     );
+    expect(find.text('Sign in to view order'), findsOneWidget);
+    expect(find.text('View order details'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('guest sign in to view order opens login then native details', (
+    tester,
+  ) async {
+    _configureViewport(tester);
+    final router = _orderConfirmationRouter(
+      completion: const ShopifyCheckoutCompletion(
+        orderId: 'gid://shopify/Order/20843',
+      ),
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerAuthRepositoryProvider.overrideWithValue(
+            _SignedInCustomerAuthRepository(),
+          ),
+          customerOrderRepositoryProvider.overrideWithValue(
+            _FakeCustomerOrderRepository(order: _customerOrderDetails()),
+          ),
+          customerOrderLookupRetryDelayProvider.overrideWithValue(
+            Duration.zero,
+          ),
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign in to view order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in'), findsWidgets);
+    expect(find.text('Continue with'), findsOneWidget);
+    expect(find.text('Native order details'), findsNothing);
+
+    await tester.tap(find.text('Continue with'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Native order details'), findsOneWidget);
+    expect(find.text('gid://shopify/Order/20843'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -599,6 +646,25 @@ class _SignedOutCustomerAuthRepository implements CustomerAuthRepository {
   Future<void> signOut(CustomerAuthSession? session) async {}
 }
 
+class _GuestThenSignedInCustomerAuthRepository
+    implements CustomerAuthRepository {
+  @override
+  Future<CustomerAuthSession?> restoreSession() async => null;
+
+  @override
+  Future<CustomerAuthSession> signIn({String? loginHint}) async {
+    return CustomerAuthSession(
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      idToken: 'id-token',
+      expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+    );
+  }
+
+  @override
+  Future<void> signOut(CustomerAuthSession? session) async {}
+}
+
 class _FakeCustomerOrderRepository implements CustomerOrderRepository {
   const _FakeCustomerOrderRepository({required this.order});
 
@@ -649,8 +715,7 @@ class _EventuallyAvailableCustomerOrderRepository
   }) async => null;
 }
 
-class _OrderIdentityCustomerOrderRepository
-    implements CustomerOrderRepository {
+class _OrderIdentityCustomerOrderRepository implements CustomerOrderRepository {
   _OrderIdentityCustomerOrderRepository({
     required this.order,
     required this.unavailableAttempts,
@@ -747,6 +812,14 @@ GoRouter _orderConfirmationRouter({
         path: '/checkout/confirmation',
         builder: (context, state) =>
             OrderConfirmationScreen(completion: completion),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/account',
+        builder: (context, state) => const Scaffold(body: Text('Account')),
       ),
       GoRoute(
         path: '/account/orders/details',

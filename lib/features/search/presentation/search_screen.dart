@@ -292,10 +292,7 @@ class _SearchBody extends ConsumerWidget {
     required WidgetRef ref,
     required ProductItem product,
   }) async {
-    final result = await quickAddProductItemToCart(
-      ref: ref,
-      product: product,
-    );
+    final result = await quickAddProductItemToCart(ref: ref, product: product);
 
     if (!context.mounted) return;
     switch (result) {

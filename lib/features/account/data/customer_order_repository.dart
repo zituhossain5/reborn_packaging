@@ -103,17 +103,23 @@ class ShopifyCustomerOrderRepository implements CustomerOrderRepository {
           nodes {
             id
             name
+            title
             quantity
             variantTitle
             sku
             image { url altText }
+            price { amount currencyCode }
             totalPrice { amount currencyCode }
+            totalDiscount { amount currencyCode }
           }
         }
         subtotal { amount currencyCode }
         totalShipping { amount currencyCode }
         totalTax { amount currencyCode }
         totalPrice { amount currencyCode }
+        shippingDiscountAllocations {
+          allocatedAmount { amount currencyCode }
+        }
         shippingAddress {
           firstName
           lastName
@@ -153,17 +159,23 @@ class ShopifyCustomerOrderRepository implements CustomerOrderRepository {
               nodes {
                 id
                 name
+                title
                 quantity
                 variantTitle
                 sku
                 image { url altText }
+                price { amount currencyCode }
                 totalPrice { amount currencyCode }
+                totalDiscount { amount currencyCode }
               }
             }
             subtotal { amount currencyCode }
             totalShipping { amount currencyCode }
             totalTax { amount currencyCode }
             totalPrice { amount currencyCode }
+            shippingDiscountAllocations {
+              allocatedAmount { amount currencyCode }
+            }
             shippingAddress {
               firstName
               lastName

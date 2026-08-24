@@ -8,9 +8,7 @@ void main() {
   test('customer auth restores, signs in, and signs out centrally', () async {
     final repository = _FakeCustomerAuthRepository();
     final container = ProviderContainer(
-      overrides: [
-        customerAuthRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [customerAuthRepositoryProvider.overrideWithValue(repository)],
     );
     addTearDown(container.dispose);
 

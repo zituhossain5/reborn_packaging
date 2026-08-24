@@ -98,9 +98,8 @@ class ShopBottomNavigation extends ConsumerWidget {
                         iconPadding: activeItem == ShopNavigationItem.account
                             ? const EdgeInsets.all(2.25)
                             : const EdgeInsets.all(2.438),
-                        onTap: () => context.go(
-                          isAuthenticated ? '/account' : '/login',
-                        ),
+                        onTap: () =>
+                            context.go(isAuthenticated ? '/account' : '/login'),
                       ),
                     ),
                   ],

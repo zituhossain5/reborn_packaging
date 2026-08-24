@@ -12,6 +12,7 @@ import '../../cart/models/cart_summary.dart';
 import '../../cart/state/cart_controller.dart';
 import '../../account/models/customer_order_details.dart';
 import '../../account/state/customer_order_details_provider.dart';
+import '../../auth/state/post_login_intent.dart';
 import '../services/shopify_checkout_launcher.dart';
 
 class OrderConfirmationScreen extends ConsumerWidget {
@@ -35,11 +36,13 @@ class OrderConfirmationScreen extends ConsumerWidget {
     );
     final isRealCheckout = completion != null;
     final orderId = completion?.orderId?.trim();
+    final isAuthenticated = ref.watch(isCustomerAccountAuthenticatedProvider);
     final canLoadOrderDetails =
         isRealCheckout &&
         orderId != null &&
         orderId.isNotEmpty &&
-        ref.watch(isCustomerAccountAuthenticatedProvider);
+        isAuthenticated;
+    final isGuestCheckout = isRealCheckout && !isAuthenticated;
     final orderDetails = canLoadOrderDetails
         ? ref.watch(customerOrderDetailsProvider(orderId))
         : null;
@@ -101,6 +104,10 @@ class OrderConfirmationScreen extends ConsumerWidget {
                           currencyCode: currencyCode,
                           estimatedArrival: estimatedArrival,
                         ),
+                        if (isGuestCheckout) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          const _GuestOrderDetailsNotice(),
+                        ],
                         const SizedBox(height: AppSpacing.lg),
                         _OrderActionButton(
                           label: 'Continue shopping',
@@ -112,9 +119,17 @@ class OrderConfirmationScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         _OrderActionButton(
-                          label: 'View order details',
-                          onTap: () =>
-                              _viewOrderDetails(context, ref, resolvedOrder),
+                          label: isGuestCheckout
+                              ? 'Sign in to view order'
+                              : 'View order details',
+                          onTap: () {
+                            _viewOrderDetails(
+                              context,
+                              ref,
+                              resolvedOrder,
+                              completion,
+                            );
+                          },
                         ),
                         const SizedBox(height: AppSpacing.md),
                       ],
@@ -129,16 +144,25 @@ class OrderConfirmationScreen extends ConsumerWidget {
     );
   }
 
-  void _viewOrderDetails(
+  Future<void> _viewOrderDetails(
     BuildContext context,
     WidgetRef ref,
     CustomerOrderDetails? resolvedOrder,
-  ) {
+    ShopifyCheckoutCompletion? completion,
+  ) async {
     if (!ref.read(isCustomerAccountAuthenticatedProvider)) {
-      _showDetailsMessage(
-        context,
-        'Order details will be available after account integration.',
-      );
+      final orderId = completion?.orderId?.trim();
+      if (orderId == null || orderId.isEmpty) {
+        _showDetailsMessage(
+          context,
+          'Your order confirmation and tracking details have been sent to your email.',
+        );
+        return;
+      }
+      ref
+          .read(pendingPostLoginIntentProvider.notifier)
+          .set(GuestOrderPostLoginIntent(orderId: orderId));
+      context.push('/login');
       return;
     }
     final orderId = resolvedOrder?.id.trim();
@@ -188,6 +212,19 @@ class OrderConfirmationScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _GuestOrderDetailsNotice extends StatelessWidget {
+  const _GuestOrderDetailsNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Your order confirmation and tracking details have been sent to your email.',
+      textAlign: TextAlign.center,
+      style: AppTypography.orderConfirmation,
+    );
   }
 }
 

@@ -8,42 +8,13 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../models/account_models.dart';
 
-Future<String?> showEditEmailSheet(
-  BuildContext context, {
-  required String currentEmail,
-}) {
-  return showGeneralDialog<String>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: 'Close edit email',
-    barrierColor: const Color(0xB3000000),
-    transitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return _BlurredSheetFrame(
-        child: _EditEmailSheet(currentEmail: currentEmail),
-      );
-    },
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      return FadeTransition(
-        opacity: animation,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 0.08),
-            end: Offset.zero,
-          ).animate(animation),
-          child: child,
-        ),
-      );
-    },
-  );
-}
-
-Future<CustomerAddress?> showAddressSheet(
+Future<void> showAddressSheet(
   BuildContext context, {
   required AccountUser user,
+  required Future<String?> Function(CustomerAddressInput address) onSave,
   CustomerAddress? address,
 }) {
-  return showGeneralDialog<CustomerAddress>(
+  return showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Close address form',
@@ -51,7 +22,7 @@ Future<CustomerAddress?> showAddressSheet(
     transitionDuration: const Duration(milliseconds: 200),
     pageBuilder: (context, animation, secondaryAnimation) {
       return _BlurredSheetFrame(
-        child: _AddressSheet(user: user, address: address),
+        child: _AddressSheet(user: user, address: address, onSave: onSave),
       );
     },
     transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -93,108 +64,38 @@ class _BlurredSheetFrame extends StatelessWidget {
   }
 }
 
-class _EditEmailSheet extends StatefulWidget {
-  const _EditEmailSheet({required this.currentEmail});
-
-  final String currentEmail;
-
-  @override
-  State<_EditEmailSheet> createState() => _EditEmailSheetState();
-}
-
-class _EditEmailSheetState extends State<_EditEmailSheet> {
-  static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
-  late final TextEditingController _controller;
-  final _focusNode = FocusNode();
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.currentEmail);
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _focusNode.requestFocus(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    final email = _controller.text.trim();
-    if (!_emailPattern.hasMatch(email)) {
-      setState(() => _error = 'Enter a valid email address.');
-      return;
-    }
-    Navigator.of(context).pop(email);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _SheetSurface(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SheetHeader(
-            title: 'Edit email',
-            onClose: () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(height: 20),
-          _SheetField(
-            controller: _controller,
-            focusNode: _focusNode,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _save(),
-            errorText: _error,
-            onChanged: (_) {
-              if (_error != null) setState(() => _error = null);
-            },
-          ),
-          const SizedBox(height: 20),
-          _SheetActions(
-            onCancel: () => Navigator.of(context).pop(),
-            onSave: _save,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _AddressSheet extends StatefulWidget {
-  const _AddressSheet({required this.user, required this.address});
+  const _AddressSheet({
+    required this.user,
+    required this.address,
+    required this.onSave,
+  });
 
   final AccountUser user;
   final CustomerAddress? address;
+  final Future<String?> Function(CustomerAddressInput address) onSave;
 
   @override
   State<_AddressSheet> createState() => _AddressSheetState();
 }
 
 class _AddressSheetState extends State<_AddressSheet> {
-  static const _countries = [
-    'United Kingdom',
-    'United States',
-    'Canada',
-    'Australia',
-    'Bangladesh',
-    'India',
-    'Ireland',
-    'France',
-    'Germany',
-    'Spain',
-    'Italy',
-    'Netherlands',
-    'Belgium',
-    'UAE',
-  ];
+  static const _countries = <String, String>{
+    'United Kingdom': 'GB',
+    'United States': 'US',
+    'Canada': 'CA',
+    'Australia': 'AU',
+    'Bangladesh': 'BD',
+    'India': 'IN',
+    'Ireland': 'IE',
+    'France': 'FR',
+    'Germany': 'DE',
+    'Spain': 'ES',
+    'Italy': 'IT',
+    'Netherlands': 'NL',
+    'Belgium': 'BE',
+    'UAE': 'AE',
+  };
 
   late final TextEditingController _country;
   late final TextEditingController _firstName;
@@ -203,7 +104,10 @@ class _AddressSheetState extends State<_AddressSheet> {
   late final TextEditingController _address2;
   late final TextEditingController _city;
   late final TextEditingController _postcode;
+  late String _territoryCode;
   final Map<String, String> _errors = {};
+  String? _submissionError;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -213,6 +117,9 @@ class _AddressSheetState extends State<_AddressSheet> {
     _country = TextEditingController(
       text: address?.country ?? 'United Kingdom',
     );
+    _territoryCode = address?.territoryCode.isNotEmpty == true
+        ? address!.territoryCode
+        : 'GB';
     _firstName = TextEditingController(
       text: address?.firstName ?? (nameParts.isEmpty ? '' : nameParts.first),
     );
@@ -241,7 +148,8 @@ class _AddressSheetState extends State<_AddressSheet> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_isSaving) return;
     final requiredFields = <String, TextEditingController>{
       'country': _country,
       'lastName': _lastName,
@@ -264,21 +172,32 @@ class _AddressSheetState extends State<_AddressSheet> {
       return;
     }
 
-    Navigator.of(context).pop(
-      CustomerAddress(
-        id:
-            widget.address?.id ??
-            'mock-address-${DateTime.now().microsecondsSinceEpoch}',
+    setState(() {
+      _isSaving = true;
+      _submissionError = null;
+    });
+    final error = await widget.onSave(
+      CustomerAddressInput(
         firstName: _firstName.text.trim(),
         lastName: _lastName.text.trim(),
         address1: _address1.text.trim(),
         address2: _address2.text.trim(),
         city: _city.text.trim(),
         postcode: _postcode.text.trim(),
-        country: _country.text.trim(),
-        isDefault: widget.address?.isDefault ?? false,
+        territoryCode: _territoryCode,
+        zoneCode: widget.address?.zoneCode ?? '',
+        phoneNumber: widget.address?.phoneNumber ?? '',
       ),
     );
+    if (!mounted) return;
+    if (error == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _isSaving = false;
+      _submissionError = error;
+    });
   }
 
   void _clearError(String key) {
@@ -304,7 +223,7 @@ class _AddressSheetState extends State<_AddressSheet> {
             separatorBuilder: (_, _) =>
                 const Divider(height: 1, color: AppColors.borderLight),
             itemBuilder: (context, index) {
-              final country = _countries[index];
+              final country = _countries.keys.elementAt(index);
               final isSelected = country == _country.text;
               return ListTile(
                 title: Text(country, style: AppTypography.accountSheetInput),
@@ -326,6 +245,7 @@ class _AddressSheetState extends State<_AddressSheet> {
     if (selectedCountry == null || selectedCountry == _country.text) return;
     setState(() {
       _country.text = selectedCountry;
+      _territoryCode = _countries[selectedCountry] ?? 'GB';
       _errors.remove('country');
     });
   }
@@ -424,9 +344,18 @@ class _AddressSheetState extends State<_AddressSheet> {
               ),
             ),
             const SizedBox(height: 20),
+            if (_submissionError != null) ...[
+              Text(
+                _submissionError!,
+                style: AppTypography.accountProfileCaption.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             _SheetActions(
-              onCancel: () => Navigator.of(context).pop(),
-              onSave: _save,
+              onCancel: _isSaving ? null : () => Navigator.of(context).pop(),
+              onSave: _isSaving ? null : _save,
             ),
           ],
         ),
@@ -573,8 +502,6 @@ class _SheetField extends StatelessWidget {
     this.label,
     this.labelStyle,
     this.hintText,
-    this.focusNode,
-    this.keyboardType,
     this.textInputAction,
     this.onSubmitted,
     this.onChanged,
@@ -585,8 +512,6 @@ class _SheetField extends StatelessWidget {
   final String? label;
   final TextStyle? labelStyle;
   final String? hintText;
-  final FocusNode? focusNode;
-  final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final ValueChanged<String>? onChanged;
@@ -605,8 +530,6 @@ class _SheetField extends StatelessWidget {
           height: 40,
           child: TextField(
             controller: controller,
-            focusNode: focusNode,
-            keyboardType: keyboardType,
             textInputAction: textInputAction,
             onSubmitted: onSubmitted,
             onChanged: onChanged,
@@ -648,8 +571,8 @@ class _SheetField extends StatelessWidget {
 class _SheetActions extends StatelessWidget {
   const _SheetActions({required this.onCancel, required this.onSave});
 
-  final VoidCallback onCancel;
-  final VoidCallback onSave;
+  final VoidCallback? onCancel;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {

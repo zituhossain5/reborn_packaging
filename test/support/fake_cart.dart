@@ -109,10 +109,9 @@ class FakeCartRepository implements CartRepository {
     required String? customerAccessToken,
   }) async {
     lastCustomerAccessToken = customerAccessToken;
-    cart = _buildCart(
-      [...?cart?.lines],
-      hasAuthenticatedBuyer: customerAccessToken?.isNotEmpty ?? false,
-    );
+    cart = _buildCart([
+      ...?cart?.lines,
+    ], hasAuthenticatedBuyer: customerAccessToken?.isNotEmpty ?? false);
     return cart!;
   }
 

@@ -46,6 +46,11 @@ class CustomerAddress {
     required this.city,
     required this.postcode,
     required this.country,
+    required this.territoryCode,
+    this.province = '',
+    this.zoneCode = '',
+    this.phoneNumber = '',
+    this.formatted = const [],
     this.isDefault = false,
   });
 
@@ -57,31 +62,49 @@ class CustomerAddress {
   final String city;
   final String postcode;
   final String country;
+  final String territoryCode;
+  final String province;
+  final String zoneCode;
+  final String phoneNumber;
+  final List<String> formatted;
   final bool isDefault;
 
   String get recipientName =>
       [firstName, lastName].where((part) => part.isNotEmpty).join(' ');
 }
 
-class MockAccountState {
-  const MockAccountState({
-    required this.user,
-    required this.orders,
-    required this.addresses,
-    required this.marketingEmailsEnabled,
+class CustomerAddressInput {
+  const CustomerAddressInput({
+    required this.firstName,
+    required this.lastName,
+    required this.address1,
+    required this.address2,
+    required this.city,
+    required this.postcode,
+    required this.territoryCode,
+    this.zoneCode = '',
+    this.phoneNumber = '',
   });
 
-  final AccountUser user;
-  final List<AccountOrder> orders;
-  final List<CustomerAddress> addresses;
-  final bool marketingEmailsEnabled;
+  final String firstName;
+  final String lastName;
+  final String address1;
+  final String address2;
+  final String city;
+  final String postcode;
+  final String territoryCode;
+  final String zoneCode;
+  final String phoneNumber;
 
-  MockAccountState withOrders(List<AccountOrder> value) {
-    return MockAccountState(
-      user: user,
-      orders: value,
-      addresses: addresses,
-      marketingEmailsEnabled: marketingEmailsEnabled,
-    );
-  }
+  Map<String, Object?> toShopifyInput() => {
+    'firstName': firstName,
+    'lastName': lastName,
+    'address1': address1,
+    'address2': address2,
+    'city': city,
+    'zip': postcode,
+    'territoryCode': territoryCode,
+    if (zoneCode.isNotEmpty) 'zoneCode': zoneCode,
+    if (phoneNumber.isNotEmpty) 'phoneNumber': phoneNumber,
+  };
 }

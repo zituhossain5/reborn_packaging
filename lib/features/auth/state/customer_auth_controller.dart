@@ -20,18 +20,27 @@ final customerAuthControllerProvider =
     );
 
 class CustomerAuthController extends AsyncNotifier<CustomerAuthSession?> {
+  bool _signInInProgress = false;
+
   @override
   Future<CustomerAuthSession?> build() {
     return ref.read(customerAuthRepositoryProvider).restoreSession();
   }
 
   Future<bool> signIn({String? loginHint}) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () =>
-          ref.read(customerAuthRepositoryProvider).signIn(loginHint: loginHint),
-    );
-    return state.hasValue && state.value != null;
+    if (_signInInProgress) return false;
+    _signInInProgress = true;
+    try {
+      state = const AsyncLoading();
+      state = await AsyncValue.guard(
+        () => ref
+            .read(customerAuthRepositoryProvider)
+            .signIn(loginHint: loginHint),
+      );
+      return state.hasValue && state.value != null;
+    } finally {
+      _signInInProgress = false;
+    }
   }
 
   Future<CustomerAuthSession?> refreshSessionForCheckout() async {

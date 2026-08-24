@@ -93,9 +93,8 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.orderDetails,
-      builder: (context, state) => OrderDetailsScreen(
-        orderId: state.extra as String? ?? '',
-      ),
+      builder: (context, state) =>
+          OrderDetailsScreen(orderId: state.extra as String? ?? ''),
     ),
   ],
 );

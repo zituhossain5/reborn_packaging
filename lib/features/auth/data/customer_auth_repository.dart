@@ -61,6 +61,9 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
   Future<CustomerAuthSession> signIn({String? loginHint}) async {
     _config.validate();
     final discovery = await _getDiscovery();
+    if (kDebugMode) {
+      debugPrint('Customer auth: interactive auth started.');
+    }
     try {
       final response = await _appAuth.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
@@ -69,8 +72,13 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
           serviceConfiguration: _serviceConfiguration(discovery),
           scopes: _config.scopes,
           loginHint: _normalizedLoginHint(loginHint),
+          promptValues: const ['login'],
         ),
       );
+      if (kDebugMode) {
+        debugPrint('Customer auth: AppAuth result success.');
+        debugPrint('Customer auth: callback received true.');
+      }
       final session = _sessionFromResponse(
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
@@ -78,10 +86,22 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
         expiresAt: response.accessTokenExpirationDateTime,
       );
       await _sessionStore.write(session);
+      if (kDebugMode) {
+        debugPrint('Customer auth: auth session persisted true.');
+      }
       return session;
     } on FlutterAppAuthUserCancelledException {
+      if (kDebugMode) {
+        debugPrint('Customer auth: AppAuth result canceled.');
+        debugPrint('Customer auth: callback received false.');
+      }
       throw const CustomerAuthCanceledException();
     } on FlutterAppAuthPlatformException catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          'Customer auth: AppAuth result error (${_safeAppAuthErrorCode(error)}).',
+        );
+      }
       if (kDebugMode) {
         throw CustomerAuthException(_safeAppAuthFailure(error));
       }
@@ -95,6 +115,12 @@ class ShopifyCustomerAuthRepository implements CustomerAuthRepository {
         'Shopify sign in could not be completed. Please try again.',
       );
     }
+  }
+
+  String _safeAppAuthErrorCode(FlutterAppAuthPlatformException exception) {
+    final details = exception.platformErrorDetails;
+    final code = details.error ?? details.code ?? exception.code;
+    return code.trim().isEmpty ? 'unknown' : code.trim();
   }
 
   String? _normalizedLoginHint(String? value) {

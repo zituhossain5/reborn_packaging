@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/formatters/money_formatter.dart';
+import '../data/customer_order_repository.dart';
 import '../models/customer_order_details.dart';
 import '../state/customer_order_details_provider.dart';
 
@@ -35,7 +37,10 @@ class OrderDetailsScreen extends ConsumerWidget {
         child: order.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => _OrderError(
-            message: error.toString(),
+            message: error is CustomerOrderNotFoundFailure
+                ? 'This order could not be found.'
+                : error.toString(),
+            notFound: error is CustomerOrderNotFoundFailure,
             onRetry: () =>
                 ref.invalidate(customerOrderDetailsProvider(orderId)),
           ),
@@ -111,6 +116,11 @@ class _OrderDetailsBody extends StatelessWidget {
               ),
             if (order.totalTax != null)
               _DetailRow(label: 'Tax', value: _money(order.totalTax!)),
+            if (order.totalDiscount != null)
+              _DetailRow(
+                label: 'Discounts',
+                value: '-${_money(order.totalDiscount!)}',
+              ),
             const Divider(height: AppSpacing.md, color: AppColors.borderLight),
             _DetailRow(
               label: 'Total',
@@ -119,7 +129,8 @@ class _OrderDetailsBody extends StatelessWidget {
             ),
           ],
         ),
-        if (order.shippingAddress != null) ...[
+        if (order.shippingAddress != null &&
+            order.shippingAddress!.formatted.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           const Text(
             'SHIPPING ADDRESS',
@@ -129,21 +140,35 @@ class _OrderDetailsBody extends StatelessWidget {
           _DetailsCard(
             children: [
               Text(
-                order.shippingAddress!.formatted.join('\n'),
+                [
+                  _addressName(order.shippingAddress!),
+                  ...order.shippingAddress!.formatted,
+                ].where((line) => line.isNotEmpty).join('\n'),
                 style: AppTypography.accountAddressBody,
               ),
             ],
           ),
         ],
-        if (order.fulfillments.isNotEmpty) ...[
+        if (order.fulfillments.any(_hasFulfillmentDetails)) ...[
           const SizedBox(height: AppSpacing.md),
           const Text('TRACKING', style: AppTypography.accountSectionLabel),
           const SizedBox(height: AppSpacing.xs),
           _DetailsCard(
             children: [
               for (final fulfillment in order.fulfillments)
-                _FulfillmentDetails(fulfillment: fulfillment),
+                if (_hasFulfillmentDetails(fulfillment))
+                  _FulfillmentDetails(fulfillment: fulfillment),
             ],
+          ),
+        ],
+        if (order.statusPageUrl != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 46,
+            child: OutlinedButton(
+              onPressed: () => _openUrl(context, order.statusPageUrl!),
+              child: const Text('View Shopify order status'),
+            ),
           ),
         ],
       ],
@@ -184,6 +209,29 @@ class _OrderDetailsBody extends StatelessWidget {
     return money.currencyCode == 'GBP'
         ? formatGbp(money.amount)
         : '${money.currencyCode} ${money.amount.toStringAsFixed(2)}';
+  }
+
+  static String _addressName(CustomerOrderAddress address) {
+    return [
+      address.firstName,
+      address.lastName,
+    ].whereType<String>().where((part) => part.isNotEmpty).join(' ');
+  }
+
+  static bool _hasFulfillmentDetails(CustomerOrderFulfillment fulfillment) {
+    return fulfillment.status != null ||
+        fulfillment.latestShipmentStatus != null ||
+        fulfillment.estimatedDeliveryAt != null ||
+        fulfillment.trackingInformation.isNotEmpty;
+  }
+
+  static Future<void> _openUrl(BuildContext context, Uri uri) async {
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open this Shopify link.')),
+      );
+    }
   }
 }
 
@@ -269,7 +317,10 @@ class _LineItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item.name, style: AppTypography.accountProfileValue),
+              Text(
+                item.title ?? item.name,
+                style: AppTypography.accountProfileValue,
+              ),
               if (item.variantTitle != null &&
                   item.variantTitle != 'Default Title')
                 Text(item.variantTitle!, style: AppTypography.accountOrderMeta),
@@ -280,9 +331,9 @@ class _LineItem extends StatelessWidget {
             ],
           ),
         ),
-        if (item.totalPrice != null)
+        if (item.totalPrice != null || item.price != null)
           Text(
-            _OrderDetailsBody._money(item.totalPrice!),
+            _OrderDetailsBody._money(item.totalPrice ?? item.price!),
             style: AppTypography.accountOrderValue,
           ),
       ],
@@ -306,16 +357,36 @@ class _FulfillmentDetails extends StatelessWidget {
             _OrderDetailsBody._humanize(status),
             style: AppTypography.accountProfileValue,
           ),
-        for (final tracking in fulfillment.trackingInformation)
+        if (fulfillment.estimatedDeliveryAt != null)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(
-              [
-                tracking.company,
-                tracking.number,
-              ].whereType<String>().join(' - '),
+              'Estimated delivery: '
+              '${MaterialLocalizations.of(context).formatMediumDate(fulfillment.estimatedDeliveryAt!.toLocal())}',
               style: AppTypography.accountAddressBody,
             ),
+          ),
+        for (final tracking in fulfillment.trackingInformation)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: tracking.url == null
+                ? Text(
+                    [
+                      tracking.company,
+                      tracking.number,
+                    ].whereType<String>().join(' - '),
+                    style: AppTypography.accountAddressBody,
+                  )
+                : TextButton(
+                    onPressed: () =>
+                        _OrderDetailsBody._openUrl(context, tracking.url!),
+                    child: Text(
+                      [
+                        tracking.company,
+                        tracking.number,
+                      ].whereType<String>().join(' - '),
+                    ),
+                  ),
           ),
       ],
     );
@@ -323,10 +394,15 @@ class _FulfillmentDetails extends StatelessWidget {
 }
 
 class _OrderError extends StatelessWidget {
-  const _OrderError({required this.message, required this.onRetry});
+  const _OrderError({
+    required this.message,
+    required this.onRetry,
+    required this.notFound,
+  });
 
   final String message;
   final VoidCallback onRetry;
+  final bool notFound;
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +418,8 @@ class _OrderError extends StatelessWidget {
               style: AppTypography.accountEmptyBody,
             ),
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            if (!notFound)
+              FilledButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),

@@ -12,7 +12,6 @@ import '../../home/widgets/shop_bottom_navigation.dart';
 import '../models/account_models.dart';
 import '../state/customer_orders_provider.dart';
 import '../state/customer_profile_provider.dart';
-import '../state/mock_account_state.dart';
 import '../widgets/account_profile.dart';
 import '../widgets/account_profile_sheets.dart';
 import '../widgets/account_order_card.dart';
@@ -28,6 +27,7 @@ class AccountScreen extends ConsumerStatefulWidget {
 
 class _AccountScreenState extends ConsumerState<AccountScreen> {
   _AccountTab _selectedTab = _AccountTab.order;
+  bool _marketingIsUpdating = false;
 
   @override
   Widget build(BuildContext context) {
@@ -80,13 +80,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       );
     }
 
-    final mockAccount = ref.watch(mockAccountStateProvider);
-    final account = MockAccountState(
-      user: customer.requireValue.toAccountUser(),
-      orders: const [],
-      addresses: mockAccount.addresses,
-      marketingEmailsEnabled: mockAccount.marketingEmailsEnabled,
-    );
+    final profile = customer.requireValue;
+    final accountUser = profile.toAccountUser();
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -96,7 +91,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         child: Column(
           children: [
             _AccountHeader(
-              user: account.user,
+              user: accountUser,
               selectedTab: _selectedTab,
               onTabChanged: (tab) => setState(() => _selectedTab = tab),
             ),
@@ -106,48 +101,23 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 child: _selectedTab == _AccountTab.order
                     ? const _OrderBody()
                     : AccountProfile(
-                        account: account,
-                        onEditEmail: () async {
-                          final email = await showEditEmailSheet(
-                            context,
-                            currentEmail: account.user.email,
-                          );
-                          if (email != null && mounted) {
-                            ref
-                                .read(mockAccountStateProvider.notifier)
-                                .updateEmail(email);
-                          }
-                        },
-                        onAddAddress: () async {
-                          final address = await showAddressSheet(
-                            context,
-                            user: account.user,
-                          );
-                          if (address != null && mounted) {
-                            ref
-                                .read(mockAccountStateProvider.notifier)
-                                .addAddress(address);
-                          }
-                        },
-                        onEditAddress: (currentAddress) async {
-                          final address = await showAddressSheet(
-                            context,
-                            user: account.user,
-                            address: currentAddress,
-                          );
-                          if (address != null && mounted) {
-                            ref
-                                .read(mockAccountStateProvider.notifier)
-                                .updateAddress(address);
-                          }
-                        },
-                        onMarketingChanged: (value) => ref
-                            .read(mockAccountStateProvider.notifier)
-                            .setMarketingEmailsEnabled(value),
+                        customer: profile,
+                        marketingIsUpdating: _marketingIsUpdating,
+                        onEditEmail: _showEmailEditingUnavailable,
+                        onAddAddress: () => showAddressSheet(
+                          context,
+                          user: accountUser,
+                          onSave: _createAddress,
+                        ),
+                        onEditAddress: (currentAddress) => showAddressSheet(
+                          context,
+                          user: accountUser,
+                          address: currentAddress,
+                          onSave: (address) =>
+                              _updateAddress(currentAddress.id, address),
+                        ),
+                        onMarketingChanged: _updateMarketingPreference,
                         onSignOut: () async {
-                          ref
-                              .read(mockAccountStateProvider.notifier)
-                              .resetSession();
                           await ref
                               .read(customerAuthControllerProvider.notifier)
                               .signOut();
@@ -162,6 +132,56 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         ),
       ),
     );
+  }
+
+  Future<String?> _createAddress(CustomerAddressInput address) async {
+    try {
+      await ref.read(customerProfileProvider.notifier).createAddress(address);
+      return null;
+    } catch (error) {
+      return error.toString();
+    }
+  }
+
+  Future<String?> _updateAddress(
+    String addressId,
+    CustomerAddressInput address,
+  ) async {
+    try {
+      await ref
+          .read(customerProfileProvider.notifier)
+          .updateAddress(addressId, address);
+      return null;
+    } catch (error) {
+      return error.toString();
+    }
+  }
+
+  Future<void> _updateMarketingPreference(bool subscribed) async {
+    if (_marketingIsUpdating) return;
+    setState(() => _marketingIsUpdating = true);
+    try {
+      await ref
+          .read(customerProfileProvider.notifier)
+          .setEmailMarketingSubscribed(subscribed);
+    } catch (error) {
+      if (mounted) _showProfileMessage(error.toString());
+    } finally {
+      if (mounted) setState(() => _marketingIsUpdating = false);
+    }
+  }
+
+  void _showEmailEditingUnavailable() {
+    _showProfileMessage(
+      'Email changes are not supported by the current Shopify Customer '
+      'Account API.',
+    );
+  }
+
+  void _showProfileMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

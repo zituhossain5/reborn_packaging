@@ -121,9 +121,6 @@ void main() {
       await controller.updateBuyerIdentity('customer-account-oauth-token'),
       isTrue,
     );
-    expect(
-      repository.lastCustomerAccessToken,
-      'customer-account-oauth-token',
-    );
+    expect(repository.lastCustomerAccessToken, 'customer-account-oauth-token');
   });
 }

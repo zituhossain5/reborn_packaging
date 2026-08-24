@@ -5,10 +5,12 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../models/account_models.dart';
+import '../models/shopify_customer.dart';
 
 class AccountProfile extends StatelessWidget {
   const AccountProfile({
-    required this.account,
+    required this.customer,
+    required this.marketingIsUpdating,
     required this.onMarketingChanged,
     required this.onEditEmail,
     required this.onAddAddress,
@@ -17,7 +19,8 @@ class AccountProfile extends StatelessWidget {
     super.key,
   });
 
-  final MockAccountState account;
+  final ShopifyCustomer customer;
+  final bool marketingIsUpdating;
   final ValueChanged<bool> onMarketingChanged;
   final VoidCallback onEditEmail;
   final VoidCallback onAddAddress;
@@ -37,17 +40,17 @@ class AccountProfile extends StatelessWidget {
           ),
           sliver: SliverList.list(
             children: [
-              _ContactSection(email: account.user.email, onEdit: onEditEmail),
+              _ContactSection(email: customer.email, onEdit: onEditEmail),
               const SizedBox(height: 20),
               _AddressSection(
-                addresses: account.addresses,
+                addresses: customer.addresses,
                 onAdd: onAddAddress,
                 onEdit: onEditAddress,
               ),
               const SizedBox(height: 20),
               _MarketingSection(
-                enabled: account.marketingEmailsEnabled,
-                onChanged: onMarketingChanged,
+                enabled: customer.marketingEmailsEnabled,
+                onChanged: marketingIsUpdating ? null : onMarketingChanged,
               ),
             ],
           ),
@@ -190,19 +193,26 @@ class _AddressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final apartment = address.address2.isEmpty ? '' : '${address.address2}, ';
+    final fallbackApartment = address.address2.isEmpty
+        ? ''
+        : '${address.address2}, ';
+    final addressBody = address.formatted.isNotEmpty
+        ? address.formatted.join('\n')
+        : '${address.address1} $fallbackApartment${address.city}, '
+              '${address.postcode},\n${address.country}';
     return _ProfileCard(
       icon: const _LocationIcon(),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(address.recipientName, style: AppTypography.accountAddressName),
-          const SizedBox(height: 2),
           Text(
-            '${address.address1} $apartment${address.city}, '
-            '${address.postcode},\n${address.country}',
-            style: AppTypography.accountAddressBody,
+            address.isDefault
+                ? '${address.recipientName} (Default)'
+                : address.recipientName,
+            style: AppTypography.accountAddressName,
           ),
+          const SizedBox(height: 2),
+          Text(addressBody, style: AppTypography.accountAddressBody),
         ],
       ),
       action: _ProfileAction(label: 'Edit', onTap: onEdit),
@@ -214,7 +224,7 @@ class _MarketingSection extends StatelessWidget {
   const _MarketingSection({required this.enabled, required this.onChanged});
 
   final bool enabled;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -407,7 +417,7 @@ class _MarketingToggle extends StatelessWidget {
   const _MarketingToggle({required this.enabled, required this.onChanged});
 
   final bool enabled;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -417,7 +427,7 @@ class _MarketingToggle extends StatelessWidget {
       label: 'Email notifications',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => onChanged(!enabled),
+        onTap: onChanged == null ? null : () => onChanged!(!enabled),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           width: 42,
