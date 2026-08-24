@@ -1,5 +1,6 @@
 package com.rebornpackaging.reborn_packaging
 
+import android.util.Log
 import com.shopify.checkoutsheetkit.DefaultCheckoutEventProcessor
 import com.shopify.checkoutsheetkit.CheckoutException
 import com.shopify.checkoutsheetkit.CheckoutSheetKitDialog
@@ -49,6 +50,7 @@ class MainActivity : FlutterFragmentActivity() {
         val eventProcessor = object : DefaultCheckoutEventProcessor(this@MainActivity) {
             override fun onCheckoutCompleted(checkoutCompletedEvent: CheckoutCompletedEvent) {
                 val order = checkoutCompletedEvent.orderDetails
+                Log.d(TAG, "Checkout order resource type: ${orderResourceType(order.id)}")
                 val total = order.cart.price.total
                 finishCheckout(
                     "checkoutCompleted",
@@ -78,6 +80,12 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
+    private fun orderResourceType(orderId: String): String {
+        if (orderId.all { it.isDigit() }) return "numeric-only"
+        val match = Regex("^gid://shopify/([^/]+)/[^/]+$").matchEntire(orderId)
+        return match?.groupValues?.getOrNull(1) ?: "other"
+    }
+
     private fun finishCheckout(
         event: String,
         errorCode: String? = null,
@@ -102,5 +110,6 @@ class MainActivity : FlutterFragmentActivity() {
         private const val CHECKOUT_CHANNEL =
             "com.rebornpackaging.reborn_packaging/shopify_checkout"
         private const val PRESENT_CHECKOUT = "presentCheckout"
+        private const val TAG = "ShopifyCheckout"
     }
 }

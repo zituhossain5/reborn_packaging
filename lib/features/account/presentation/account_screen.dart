@@ -10,6 +10,7 @@ import '../../auth/presentation/login_screen.dart';
 import '../../auth/state/customer_auth_controller.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
 import '../models/account_models.dart';
+import '../state/customer_orders_provider.dart';
 import '../state/customer_profile_provider.dart';
 import '../state/mock_account_state.dart';
 import '../widgets/account_profile.dart';
@@ -82,7 +83,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final mockAccount = ref.watch(mockAccountStateProvider);
     final account = MockAccountState(
       user: customer.requireValue.toAccountUser(),
-      orders: mockAccount.orders,
+      orders: const [],
       addresses: mockAccount.addresses,
       marketingEmailsEnabled: mockAccount.marketingEmailsEnabled,
     );
@@ -103,7 +104,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               child: ColoredBox(
                 color: AppColors.backgroundLight,
                 child: _selectedTab == _AccountTab.order
-                    ? _OrderBody(orders: account.orders)
+                    ? const _OrderBody()
                     : AccountProfile(
                         account: account,
                         onEditEmail: () async {
@@ -292,32 +293,100 @@ class _AccountTabButton extends StatelessWidget {
   }
 }
 
-class _OrderBody extends StatelessWidget {
-  const _OrderBody({required this.orders});
+class _OrderBody extends ConsumerWidget {
+  const _OrderBody();
 
-  final List<AccountOrder> orders;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orders = ref.watch(customerOrdersProvider);
+    return orders.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => _OrdersError(
+        message: error.toString(),
+        onRetry: () => ref.invalidate(customerOrdersProvider),
+      ),
+      data: (data) {
+        if (data.orders.isEmpty) return const _EmptyOrders();
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.extentAfter < 240) {
+              ref.read(customerOrdersProvider.notifier).loadMore();
+            }
+            return false;
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              14,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
+            children: [
+              const Text(
+                'Recent orders',
+                style: AppTypography.accountOrdersHeading,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              for (var index = 0; index < data.orders.length; index++) ...[
+                AccountOrderCard(
+                  order: data.orders[index],
+                  onTap: () => context.push(
+                    '/account/orders/details',
+                    extra: data.orders[index].id,
+                  ),
+                ),
+                if (index < data.orders.length - 1)
+                  const SizedBox(height: AppSpacing.xs),
+              ],
+              if (data.isLoadingMore) ...[
+                const SizedBox(height: AppSpacing.md),
+                const Center(
+                  child: SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ],
+              if (data.loadMoreError != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                TextButton(
+                  onPressed: () =>
+                      ref.read(customerOrdersProvider.notifier).loadMore(),
+                  child: const Text('Retry loading more orders'),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _OrdersError extends StatelessWidget {
+  const _OrdersError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    if (orders.isEmpty) {
-      return const _EmptyOrders();
-    }
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        14,
-        AppSpacing.md,
-        AppSpacing.md,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.accountEmptyBody,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
       ),
-      children: [
-        const Text('Recent orders', style: AppTypography.accountOrdersHeading),
-        const SizedBox(height: AppSpacing.sm),
-        for (var index = 0; index < orders.length; index++) ...[
-          AccountOrderCard(order: orders[index]),
-          if (index < orders.length - 1) const SizedBox(height: AppSpacing.xs),
-        ],
-      ],
     );
   }
 }

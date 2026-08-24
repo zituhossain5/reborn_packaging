@@ -33,6 +33,10 @@ abstract interface class CartRepository {
     required String cartId,
     required List<String> discountCodes,
   });
+  Future<ShopifyCart> updateBuyerIdentity({
+    required String cartId,
+    required String? customerAccessToken,
+  });
 }
 
 class ShopifyCartRepository implements CartRepository {
@@ -106,6 +110,24 @@ class ShopifyCartRepository implements CartRepository {
   ''' +
       _cartFragment;
 
+  static const cartBuyerIdentityUpdateMutation =
+      r'''
+    mutation CartBuyerIdentityUpdate(
+      $cartId: ID!
+      $buyerIdentity: CartBuyerIdentityInput!
+    ) {
+      cartBuyerIdentityUpdate(
+        cartId: $cartId
+        buyerIdentity: $buyerIdentity
+      ) {
+        cart { ...CartFields }
+        userErrors { field message code }
+        warnings { target message code }
+      }
+    }
+  ''' +
+      _cartFragment;
+
   static const _cartFragment = r'''
     fragment CartFields on Cart {
       id
@@ -145,6 +167,9 @@ class ShopifyCartRepository implements CartRepository {
         totalTaxAmount { amount currencyCode }
       }
       discountCodes { code applicable }
+      buyerIdentity {
+        customer { id email }
+      }
     }
   ''';
 
@@ -239,6 +264,21 @@ class ShopifyCartRepository implements CartRepository {
     return _cartFromPayload(data, 'cartDiscountCodesUpdate');
   }
 
+  @override
+  Future<ShopifyCart> updateBuyerIdentity({
+    required String cartId,
+    required String? customerAccessToken,
+  }) async {
+    final data = await _client.execute(
+      cartBuyerIdentityUpdateMutation,
+      variables: {
+        'cartId': cartId,
+        'buyerIdentity': {'customerAccessToken': customerAccessToken},
+      },
+    );
+    return _cartFromPayload(data, 'cartBuyerIdentityUpdate');
+  }
+
   ShopifyCart _cartFromPayload(Map<String, dynamic> data, String key) {
     final payload = _map(
       data[key],
@@ -295,6 +335,10 @@ class ShopifyCartRepository implements CartRepository {
     final lines = _map(json['lines'], 'Shopify cart lines were missing.');
     final rawLines = lines['nodes'];
     final rawDiscountCodes = json['discountCodes'];
+    final buyerIdentity = json['buyerIdentity'];
+    final buyerCustomer = buyerIdentity is Map<String, dynamic>
+        ? buyerIdentity['customer']
+        : null;
     return ShopifyCart(
       id: json['id'] as String? ?? '',
       totalQuantity: json['totalQuantity'] as int? ?? 0,
@@ -319,6 +363,9 @@ class ShopifyCartRepository implements CartRepository {
                 )
                 .toList(growable: false)
           : const [],
+      hasAuthenticatedBuyer:
+          buyerCustomer is Map<String, dynamic> &&
+          (buyerCustomer['id'] as String? ?? '').trim().isNotEmpty,
       warnings: warnings,
     );
   }

@@ -9,6 +9,8 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/config/cart_pricing_config.dart';
 import '../../../core/formatters/money_formatter.dart';
+import '../../account/state/customer_orders_provider.dart';
+import '../../auth/state/customer_auth_controller.dart';
 import '../../checkout/services/shopify_checkout_launcher.dart';
 import '../../home/widgets/shop_bottom_navigation.dart';
 import '../models/cart_item.dart';
@@ -167,11 +169,29 @@ class _CartScreenState extends ConsumerState<CartScreen>
       await controller.restore();
       if (!mounted) return;
 
-      final state = ref.read(cartControllerProvider);
-      final cart = state.cart;
+      var state = ref.read(cartControllerProvider);
+      var cart = state.cart;
       if (cart == null || cart.lines.isEmpty) {
         _showCheckoutError(
           state.errorMessage ?? 'Your Shopify cart is empty. Please retry.',
+        );
+        return;
+      }
+
+      final authSession = await ref
+          .read(customerAuthControllerProvider.notifier)
+          .refreshSessionForCheckout();
+      if (!mounted) return;
+      final identityUpdated = await controller.updateBuyerIdentity(
+        authSession?.accessToken,
+      );
+      if (!mounted) return;
+      state = ref.read(cartControllerProvider);
+      cart = state.cart;
+      if (!identityUpdated || cart == null || cart.lines.isEmpty) {
+        _showCheckoutError(
+          state.errorMessage ??
+              'Unable to prepare Shopify checkout. Please retry.',
         );
         return;
       }
@@ -191,6 +211,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
       switch (checkoutResult.status) {
         case ShopifyCheckoutStatus.completed:
           await ref.read(cartControllerProvider.notifier).clear();
+          ref.invalidate(customerOrdersProvider);
           if (mounted) {
             context.go(
               '/checkout/confirmation',

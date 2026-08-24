@@ -6,6 +6,7 @@ class ShopifyCart {
     required this.lines,
     required this.cost,
     required this.discountCodes,
+    this.hasAuthenticatedBuyer = false,
     this.warnings = const [],
   });
 
@@ -15,6 +16,7 @@ class ShopifyCart {
   final List<CartLine> lines;
   final CartCost cost;
   final List<CartDiscountCode> discountCodes;
+  final bool hasAuthenticatedBuyer;
   final List<ShopifyCartWarning> warnings;
 }
 

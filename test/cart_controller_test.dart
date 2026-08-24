@@ -100,4 +100,30 @@ void main() {
     expect(find.byKey(const ValueKey('cart_quantity_badge')), findsOneWidget);
     expect(find.text('99+'), findsOneWidget);
   });
+
+  test('checkout buyer identity refreshes the centralized cart', () async {
+    final repository = FakeCartRepository();
+    final container = ProviderContainer(
+      overrides: [
+        cartRepositoryProvider.overrideWithValue(repository),
+        cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(cartControllerProvider.notifier);
+    await controller.addVariant(
+      product: mockKraftRoundBowlsProduct,
+      variant: mockKraftRoundBowlsProduct.selectedVariant,
+      quantity: 1,
+    );
+
+    expect(
+      await controller.updateBuyerIdentity('customer-account-oauth-token'),
+      isTrue,
+    );
+    expect(
+      repository.lastCustomerAccessToken,
+      'customer-account-oauth-token',
+    );
+  });
 }

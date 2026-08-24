@@ -8,30 +8,6 @@ const mockAccountUser = AccountUser(
   email: 'michelle03@gmail.com',
 );
 
-const mockAccountOrders = [
-  AccountOrder(
-    number: '#RP-20843',
-    dateLabel: '24 July 2026',
-    itemCount: 2,
-    status: AccountOrderStatus.pending,
-    total: 120.64,
-  ),
-  AccountOrder(
-    number: '#RP-20832',
-    dateLabel: '8 Jun 2026',
-    itemCount: 3,
-    status: AccountOrderStatus.delivered,
-    total: 85.62,
-  ),
-  AccountOrder(
-    number: '#RP-20820',
-    dateLabel: '8 Jun 2026',
-    itemCount: 1,
-    status: AccountOrderStatus.delivered,
-    total: 45.02,
-  ),
-];
-
 const mockAccountAddress = CustomerAddress(
   id: 'mock-address-1',
   firstName: 'Michelle',
@@ -46,7 +22,7 @@ const mockAccountAddress = CustomerAddress(
 
 const populatedMockAccountState = MockAccountState(
   user: mockAccountUser,
-  orders: mockAccountOrders,
+  orders: [],
   addresses: [mockAccountAddress],
   marketingEmailsEnabled: true,
 );

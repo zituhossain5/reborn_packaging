@@ -21,6 +21,22 @@ import 'package:reborn_packaging/features/auth/state/customer_auth_controller.da
 import 'support/fake_cart.dart';
 
 void main() {
+  test('OrderIdentity matches only an Order with the same numeric tail', () {
+    final identifier = ShopifyCheckoutOrderIdentifier.parse(
+      'gid://shopify/OrderIdentity/20843',
+    );
+
+    expect(identifier.resource, ShopifyCheckoutOrderResource.orderIdentity);
+    expect(
+      identifier.matchesCustomerOrderId('gid://shopify/Order/20843'),
+      isTrue,
+    );
+    expect(
+      identifier.matchesCustomerOrderId('gid://shopify/Order/99999'),
+      isFalse,
+    );
+  });
+
   testWidgets('canceled Shopify checkout preserves cart and route', (
     tester,
   ) async {
@@ -32,6 +48,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          customerAuthRepositoryProvider.overrideWithValue(
+            const _SignedOutCustomerAuthRepository(),
+          ),
           cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
           cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
           shopifyCheckoutLauncherProvider.overrideWithValue(checkoutLauncher),
@@ -75,6 +94,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          customerAuthRepositoryProvider.overrideWithValue(
+            const _SignedOutCustomerAuthRepository(),
+          ),
           cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
           cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
           shopifyCheckoutLauncherProvider.overrideWithValue(checkoutLauncher),
@@ -304,6 +326,134 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('newly completed order lookup retries until Shopify resolves it', (
+    tester,
+  ) async {
+    _configureViewport(tester);
+    final repository = _EventuallyAvailableCustomerOrderRepository(
+      order: _customerOrderDetails(name: '#1186'),
+      failuresBeforeSuccess: 2,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerAuthRepositoryProvider.overrideWithValue(
+            _SignedInCustomerAuthRepository(),
+          ),
+          customerOrderRepositoryProvider.overrideWithValue(repository),
+          customerOrderLookupRetryDelayProvider.overrideWithValue(
+            Duration.zero,
+          ),
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+        ],
+        child: const MaterialApp(
+          home: OrderConfirmationScreen(
+            completion: ShopifyCheckoutCompletion(
+              orderId: 'gid://shopify/Order/1186',
+              itemCount: 1,
+              totalAmount: 46.07,
+              currencyCode: 'GBP',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.calls, 3);
+    expect(find.text('#1186'), findsOneWidget);
+    expect(find.text('gid://shopify/Order/1186'), findsNothing);
+  });
+
+  testWidgets(
+    'OrderIdentity resolves through recent orders once without direct lookup',
+    (tester) async {
+      _configureViewport(tester);
+      final repository = _OrderIdentityCustomerOrderRepository(
+        order: _customerOrderDetails(name: '#1186'),
+        unavailableAttempts: 2,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerAuthRepositoryProvider.overrideWithValue(
+              _SignedInCustomerAuthRepository(),
+            ),
+            customerOrderRepositoryProvider.overrideWithValue(repository),
+            customerOrderLookupRetryDelayProvider.overrideWithValue(
+              Duration.zero,
+            ),
+            cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+            cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+          ],
+          child: const MaterialApp(
+            home: OrderConfirmationScreen(
+              completion: ShopifyCheckoutCompletion(
+                orderId: 'gid://shopify/OrderIdentity/20843',
+                itemCount: 1,
+                totalAmount: 46.07,
+                currencyCode: 'GBP',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repository.directCalls, 0);
+      expect(repository.recentCalls, 3);
+      expect(find.text('#1186'), findsOneWidget);
+      expect(find.text('Loading...'), findsNothing);
+    },
+  );
+
+  testWidgets('unavailable order stops one bounded lookup sequence', (
+    tester,
+  ) async {
+    _configureViewport(tester);
+    final repository = _OrderIdentityCustomerOrderRepository(
+      order: _customerOrderDetails(),
+      unavailableAttempts: 20,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerAuthRepositoryProvider.overrideWithValue(
+            _SignedInCustomerAuthRepository(),
+          ),
+          customerOrderRepositoryProvider.overrideWithValue(repository),
+          customerOrderLookupRetryDelayProvider.overrideWithValue(
+            Duration.zero,
+          ),
+          cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+          cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
+        ],
+        child: const MaterialApp(
+          home: OrderConfirmationScreen(
+            completion: ShopifyCheckoutCompletion(
+              orderId: 'gid://shopify/OrderIdentity/20843',
+              itemCount: 1,
+              totalAmount: 46.07,
+              currencyCode: 'GBP',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.directCalls, 0);
+    expect(repository.recentCalls, 8);
+    expect(find.text('Order number'), findsNothing);
+    expect(find.text('Loading...'), findsNothing);
+    expect(find.text('1 product'), findsOneWidget);
+    expect(find.text('\u00A346.07'), findsOneWidget);
+  });
+
   testWidgets('authenticated order details tap opens native details route', (
     tester,
   ) async {
@@ -434,6 +584,21 @@ class _SignedInCustomerAuthRepository implements CustomerAuthRepository {
   Future<void> signOut(CustomerAuthSession? session) async {}
 }
 
+class _SignedOutCustomerAuthRepository implements CustomerAuthRepository {
+  const _SignedOutCustomerAuthRepository();
+
+  @override
+  Future<CustomerAuthSession?> restoreSession() async => null;
+
+  @override
+  Future<CustomerAuthSession> signIn({String? loginHint}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> signOut(CustomerAuthSession? session) async {}
+}
+
 class _FakeCustomerOrderRepository implements CustomerOrderRepository {
   const _FakeCustomerOrderRepository({required this.order});
 
@@ -445,6 +610,73 @@ class _FakeCustomerOrderRepository implements CustomerOrderRepository {
     required String accessToken,
   }) async {
     return order;
+  }
+
+  @override
+  Future<CustomerOrderDetails?> findRecentOrder({
+    required String orderId,
+    required String accessToken,
+  }) async => order;
+}
+
+class _EventuallyAvailableCustomerOrderRepository
+    implements CustomerOrderRepository {
+  _EventuallyAvailableCustomerOrderRepository({
+    required this.order,
+    required this.failuresBeforeSuccess,
+  });
+
+  final CustomerOrderDetails order;
+  final int failuresBeforeSuccess;
+  int calls = 0;
+
+  @override
+  Future<CustomerOrderDetails> fetchOrder({
+    required String orderId,
+    required String accessToken,
+  }) async {
+    calls++;
+    if (calls <= failuresBeforeSuccess) {
+      throw const CustomerOrderNotFoundFailure();
+    }
+    return order;
+  }
+
+  @override
+  Future<CustomerOrderDetails?> findRecentOrder({
+    required String orderId,
+    required String accessToken,
+  }) async => null;
+}
+
+class _OrderIdentityCustomerOrderRepository
+    implements CustomerOrderRepository {
+  _OrderIdentityCustomerOrderRepository({
+    required this.order,
+    required this.unavailableAttempts,
+  });
+
+  final CustomerOrderDetails order;
+  final int unavailableAttempts;
+  int directCalls = 0;
+  int recentCalls = 0;
+
+  @override
+  Future<CustomerOrderDetails> fetchOrder({
+    required String orderId,
+    required String accessToken,
+  }) async {
+    directCalls++;
+    throw const CustomerOrderNotFoundFailure();
+  }
+
+  @override
+  Future<CustomerOrderDetails?> findRecentOrder({
+    required String orderId,
+    required String accessToken,
+  }) async {
+    recentCalls++;
+    return recentCalls <= unavailableAttempts ? null : order;
   }
 }
 

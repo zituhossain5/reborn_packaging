@@ -113,7 +113,8 @@ class OrderConfirmationScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.sm),
                         _OrderActionButton(
                           label: 'View order details',
-                          onTap: () => _viewOrderDetails(context, ref),
+                          onTap: () =>
+                              _viewOrderDetails(context, ref, resolvedOrder),
                         ),
                         const SizedBox(height: AppSpacing.md),
                       ],
@@ -128,17 +129,21 @@ class OrderConfirmationScreen extends ConsumerWidget {
     );
   }
 
-  void _viewOrderDetails(BuildContext context, WidgetRef ref) {
-    final orderId = completion?.orderId?.trim();
-    if (orderId == null || orderId.isEmpty) {
-      _showDetailsMessage(context, 'Order details are not available yet.');
-      return;
-    }
+  void _viewOrderDetails(
+    BuildContext context,
+    WidgetRef ref,
+    CustomerOrderDetails? resolvedOrder,
+  ) {
     if (!ref.read(isCustomerAccountAuthenticatedProvider)) {
       _showDetailsMessage(
         context,
         'Order details will be available after account integration.',
       );
+      return;
+    }
+    final orderId = resolvedOrder?.id.trim();
+    if (orderId == null || orderId.isEmpty) {
+      _showDetailsMessage(context, 'Order details are not available yet.');
       return;
     }
     context.push('/account/orders/details', extra: orderId);

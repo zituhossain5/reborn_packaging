@@ -34,6 +34,20 @@ class CustomerAuthController extends AsyncNotifier<CustomerAuthSession?> {
     return state.hasValue && state.value != null;
   }
 
+  Future<CustomerAuthSession?> refreshSessionForCheckout() async {
+    state = const AsyncLoading();
+    try {
+      final session = await ref
+          .read(customerAuthRepositoryProvider)
+          .restoreSession();
+      state = AsyncData(session);
+      return session;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
   Future<void> signOut() async {
     final currentSession = state.value;
     state = const AsyncLoading();

@@ -23,6 +23,7 @@ class FakeCartRepository implements CartRepository {
   int updateCalls = 0;
   int removeCalls = 0;
   String? lastMerchandiseId;
+  String? lastCustomerAccessToken;
 
   @override
   Future<ShopifyCart?> fetchCart(String cartId) async =>
@@ -102,6 +103,19 @@ class FakeCartRepository implements CartRepository {
     return cart!;
   }
 
+  @override
+  Future<ShopifyCart> updateBuyerIdentity({
+    required String cartId,
+    required String? customerAccessToken,
+  }) async {
+    lastCustomerAccessToken = customerAccessToken;
+    cart = _buildCart(
+      [...?cart?.lines],
+      hasAuthenticatedBuyer: customerAccessToken?.isNotEmpty ?? false,
+    );
+    return cart!;
+  }
+
   CartLine _newLine(String merchandiseId, int quantity) {
     final product = mockKraftRoundBowlsProduct;
     final variant = product.variants.firstWhere(
@@ -156,6 +170,7 @@ class FakeCartRepository implements CartRepository {
   ShopifyCart _buildCart(
     List<CartLine> lines, {
     List<CartDiscountCode> discountCodes = const [],
+    bool hasAuthenticatedBuyer = false,
   }) {
     final subtotal = lines.fold<double>(
       0,
@@ -169,6 +184,7 @@ class FakeCartRepository implements CartRepository {
       lines: List.unmodifiable(lines),
       cost: CartCost(subtotalAmount: money, totalAmount: money),
       discountCodes: discountCodes,
+      hasAuthenticatedBuyer: hasAuthenticatedBuyer,
     );
   }
 

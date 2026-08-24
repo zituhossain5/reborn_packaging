@@ -231,6 +231,46 @@ class CartController extends Notifier<CartState> {
     }
   }
 
+  Future<bool> updateBuyerIdentity(String? customerAccessToken) async {
+    final cart = state.cart;
+    if (cart == null || state.isMutating) return false;
+    state = state.copyWith(isMutating: true, errorMessage: null);
+    try {
+      final updatedCart = await _repository.updateBuyerIdentity(
+        cartId: cart.id,
+        customerAccessToken: customerAccessToken,
+      );
+      final expectsAuthenticatedBuyer =
+          customerAccessToken?.trim().isNotEmpty ?? false;
+      if (kDebugMode) {
+        debugPrint(
+          'buyerIdentity customer associated: '
+          '${updatedCart.hasAuthenticatedBuyer}',
+        );
+      }
+      if (expectsAuthenticatedBuyer && !updatedCart.hasAuthenticatedBuyer) {
+        throw const ShopifyResponseFailure(
+          'Shopify could not authenticate this checkout. Please sign in again.',
+        );
+      }
+      await _accept(updatedCart);
+      return true;
+    } on ShopifyFailure catch (failure) {
+      if (kDebugMode) {
+        debugPrint('buyerIdentity customer associated: false');
+      }
+      await _handleMutationFailure(failure);
+      return false;
+    } catch (error, stackTrace) {
+      _setUnexpectedFailure(
+        action: 'prepare checkout',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
   Future<void> clear() async {
     state = const CartState();
     await _idStore.clear();
