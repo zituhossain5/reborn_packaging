@@ -1,6 +1,7 @@
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Base64
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -30,6 +31,22 @@ val customerAccountRedirectScheme = decodedDartDefines[
     ?.let { scheme -> if (scheme != null && scheme.startsWith("shop.")) scheme else null }
     ?: "shop.customer-account.unconfigured"
 
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+val requiredKeystoreProperties = listOf(
+    "storePassword",
+    "keyPassword",
+    "keyAlias",
+    "storeFile",
+)
+val hasReleaseSigningConfig = requiredKeystoreProperties.all { key ->
+    keystoreProperties.getProperty(key)?.isNotBlank() == true
+}
+
 android {
     namespace = "com.rebornpackaging.reborn_packaging"
     compileSdk = flutter.compileSdkVersion
@@ -52,10 +69,30 @@ android {
         manifestPlaceholders["appAuthRedirectScheme"] = customerAccountRedirectScheme
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigningConfig) {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Configure a private upload/release key outside source control before shipping.
+            signingConfig = signingConfigs.getByName("release")
         }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.name.contains("Release") } && !hasReleaseSigningConfig) {
+        throw GradleException(
+            "Release signing requires android/key.properties with storePassword, " +
+                "keyPassword, keyAlias, and storeFile."
+        )
     }
 }
 
