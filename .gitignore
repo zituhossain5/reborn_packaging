@@ -45,7 +45,7 @@ app.*.map.json
 /android/app/release
 
 # Local Shopify runtime configuration
-config/dev.json
+
 config/prod.json
 
 # Android release signing
