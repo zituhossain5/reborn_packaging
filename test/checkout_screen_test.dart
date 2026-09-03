@@ -340,7 +340,7 @@ void main() {
         ProviderScope(
           overrides: [
             customerAuthRepositoryProvider.overrideWithValue(
-              _GuestThenSignedInCustomerAuthRepository(),
+              _SignedInCustomerAuthRepository(),
             ),
             customerOrderRepositoryProvider.overrideWithValue(repository),
             customerOrderLookupRetryDelayProvider.overrideWithValue(
@@ -361,6 +361,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
       await tester.pumpAndSettle();
 
       expect(repository.calls, 3);
@@ -404,6 +405,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       expect(repository.directCalls, 0);
       expect(repository.recentCalls, 3);
@@ -446,6 +448,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
 
     expect(repository.directCalls, 0);
@@ -497,7 +500,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          isCustomerAccountAuthenticatedProvider.overrideWithValue(false),
+          customerAuthRepositoryProvider.overrideWithValue(
+            const _SignedOutCustomerAuthRepository(),
+          ),
           cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
           cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
         ],
@@ -538,7 +543,7 @@ void main() {
       ProviderScope(
         overrides: [
           customerAuthRepositoryProvider.overrideWithValue(
-            _SignedInCustomerAuthRepository(),
+            const _SignedOutThenSignedInCustomerAuthRepository(),
           ),
           customerOrderRepositoryProvider.overrideWithValue(
             _FakeCustomerOrderRepository(order: _customerOrderDetails()),
@@ -574,6 +579,9 @@ void main() {
       ProviderScope(
         overrides: [
           isCustomerAccountAuthenticatedProvider.overrideWithValue(true),
+          customerAuthRepositoryProvider.overrideWithValue(
+            _SignedInCustomerAuthRepository(),
+          ),
           cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
           cartIdStoreProvider.overrideWithValue(MemoryCartIdStore()),
         ],
@@ -646,8 +654,10 @@ class _SignedOutCustomerAuthRepository implements CustomerAuthRepository {
   Future<void> signOut(CustomerAuthSession? session) async {}
 }
 
-class _GuestThenSignedInCustomerAuthRepository
+class _SignedOutThenSignedInCustomerAuthRepository
     implements CustomerAuthRepository {
+  const _SignedOutThenSignedInCustomerAuthRepository();
+
   @override
   Future<CustomerAuthSession?> restoreSession() async => null;
 
@@ -819,10 +829,7 @@ GoRouter _orderConfirmationRouter({
         builder: (context, state) =>
             OrderConfirmationScreen(completion: completion),
       ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/account',
         builder: (context, state) => const Scaffold(body: Text('Account')),

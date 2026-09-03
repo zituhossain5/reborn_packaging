@@ -386,10 +386,7 @@ class CartController extends Notifier<CartState> {
         )
         .replaceAll(RegExp(r'https?://\S+'), '[redacted URL]')
         .replaceAll(
-          RegExp(
-            r'(token|code|verifier|key)=([^&\s]+)',
-            caseSensitive: false,
-          ),
+          RegExp(r'(token|code|verifier|key)=([^&\s]+)', caseSensitive: false),
           r'$1=[redacted]',
         );
   }

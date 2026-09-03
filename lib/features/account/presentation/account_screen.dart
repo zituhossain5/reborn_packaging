@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/config/legal_support_config.dart';
 import '../../auth/presentation/login_screen.dart';
 import '../../auth/state/customer_auth_controller.dart';
 import '../../auth/state/post_login_intent.dart';
@@ -83,6 +85,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     final profile = customer.requireValue;
     final accountUser = profile.toAccountUser();
+    final legalSupportConfig = LegalSupportConfig.fromEnvironment();
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -117,6 +120,11 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                           onSave: (address) =>
                               _updateAddress(currentAddress.id, address),
                         ),
+                        legalLinks: legalSupportConfig.configuredLinks,
+                        onOpenLegalSupport: (link) =>
+                            _openLegalSupportLink(legalSupportConfig, link),
+                        onDeleteAccount: () =>
+                            _confirmAccountDeletion(legalSupportConfig),
                         onMarketingChanged: _updateMarketingPreference,
                         onSignOut: () async {
                           await ref
@@ -181,6 +189,55 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       'Email changes are not supported by the current Shopify Customer '
       'Account API.',
     );
+  }
+
+  Future<void> _openLegalSupportLink(
+    LegalSupportConfig config,
+    LegalSupportLink link,
+  ) async {
+    final uri = config.uriFor(link);
+    if (uri == null) {
+      _showProfileMessage('${link.label} is not configured yet.');
+      return;
+    }
+    await _launchLegalSupportUri(uri);
+  }
+
+  Future<void> _confirmAccountDeletion(LegalSupportConfig config) async {
+    final uri = config.uriFor(LegalSupportLink.accountDeletion);
+    if (uri == null) {
+      _showProfileMessage('Account deletion is not configured yet.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete account'),
+        content: const Text(
+          'You will be taken to Reborn Packaging support to request account '
+          'deletion. Your account will not be deleted automatically in the app.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    await _launchLegalSupportUri(uri);
+  }
+
+  Future<void> _launchLegalSupportUri(Uri uri) async {
+    final opened = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    if (!opened && mounted) {
+      _showProfileMessage('Unable to open this link. Please try again.');
+    }
   }
 
   void _showProfileMessage(String message) {

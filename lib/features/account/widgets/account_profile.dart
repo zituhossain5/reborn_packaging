@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/config/legal_support_config.dart';
 import '../models/account_models.dart';
 import '../models/shopify_customer.dart';
 
@@ -15,6 +16,9 @@ class AccountProfile extends StatelessWidget {
     required this.onEditEmail,
     required this.onAddAddress,
     required this.onEditAddress,
+    required this.legalLinks,
+    required this.onOpenLegalSupport,
+    required this.onDeleteAccount,
     required this.onSignOut,
     super.key,
   });
@@ -25,6 +29,9 @@ class AccountProfile extends StatelessWidget {
   final VoidCallback onEditEmail;
   final VoidCallback onAddAddress;
   final ValueChanged<CustomerAddress> onEditAddress;
+  final List<LegalSupportLink> legalLinks;
+  final ValueChanged<LegalSupportLink> onOpenLegalSupport;
+  final VoidCallback onDeleteAccount;
   final VoidCallback onSignOut;
 
   @override
@@ -52,6 +59,14 @@ class AccountProfile extends StatelessWidget {
                 enabled: customer.marketingEmailsEnabled,
                 onChanged: marketingIsUpdating ? null : onMarketingChanged,
               ),
+              if (legalLinks.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                _LegalSupportSection(
+                  links: legalLinks,
+                  onOpen: onOpenLegalSupport,
+                  onDeleteAccount: onDeleteAccount,
+                ),
+              ],
             ],
           ),
         ),
@@ -104,6 +119,90 @@ class AccountProfile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LegalSupportSection extends StatelessWidget {
+  const _LegalSupportSection({
+    required this.links,
+    required this.onOpen,
+    required this.onDeleteAccount,
+  });
+
+  final List<LegalSupportLink> links;
+  final ValueChanged<LegalSupportLink> onOpen;
+  final VoidCallback onDeleteAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    return _ProfileSection(
+      title: 'LEGAL & SUPPORT',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppSpacing.sm),
+        ),
+        child: Column(
+          children: [
+            for (var index = 0; index < links.length; index++) ...[
+              _LegalSupportRow(
+                link: links[index],
+                onTap: links[index] == LegalSupportLink.accountDeletion
+                    ? onDeleteAccount
+                    : () => onOpen(links[index]),
+              ),
+              if (index < links.length - 1)
+                const Divider(height: 1, color: AppColors.borderLight),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegalSupportRow extends StatelessWidget {
+  const _LegalSupportRow({required this.link, required this.onTap});
+
+  final LegalSupportLink link;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDestructive = link == LegalSupportLink.accountDeletion;
+    return Semantics(
+      button: true,
+      label: link.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  link.label,
+                  style: AppTypography.accountProfileValue.copyWith(
+                    color: isDestructive
+                        ? AppColors.accountDanger
+                        : AppColors.black,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: AppColors.secondaryText,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

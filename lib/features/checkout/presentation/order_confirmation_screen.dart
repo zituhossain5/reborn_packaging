@@ -11,6 +11,7 @@ import '../../../core/formatters/money_formatter.dart';
 import '../../cart/state/cart_controller.dart';
 import '../../account/models/customer_order_details.dart';
 import '../../account/state/customer_order_details_provider.dart';
+import '../../auth/state/customer_auth_controller.dart';
 import '../../auth/state/post_login_intent.dart';
 import '../services/shopify_checkout_launcher.dart';
 
@@ -22,10 +23,12 @@ class OrderConfirmationScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final orderId = completion.orderId?.trim();
-    final isAuthenticated = ref.watch(isCustomerAccountAuthenticatedProvider);
+    final auth = ref.watch(customerAuthControllerProvider);
+    final isAuthenticated = auth.value != null;
+    final isAuthRestoring = auth.isLoading && !isAuthenticated;
     final canLoadOrderDetails =
         orderId != null && orderId.isNotEmpty && isAuthenticated;
-    final isGuestCheckout = !isAuthenticated;
+    final isGuestCheckout = !isAuthRestoring && !isAuthenticated;
     final orderDetails = canLoadOrderDetails
         ? ref.watch(customerOrderDetailsProvider(orderId))
         : null;
@@ -72,7 +75,11 @@ class OrderConfirmationScreen extends ConsumerWidget {
                         _OrderSummary(
                           orderReference: orderReference,
                           isLoadingOrderMetadata:
-                              orderDetails?.isLoading ?? false,
+                              (orderId != null &&
+                                  orderId.isNotEmpty &&
+                                  isAuthRestoring) ||
+                              ((orderDetails?.isLoading ?? false) &&
+                                  !(orderDetails?.hasError ?? false)),
                           itemCount: itemCount,
                           total: total,
                           currencyCode: currencyCode,
@@ -124,7 +131,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
     CustomerOrderDetails? resolvedOrder,
     ShopifyCheckoutCompletion? completion,
   ) async {
-    if (!ref.read(isCustomerAccountAuthenticatedProvider)) {
+    if (ref.read(customerAuthControllerProvider).value == null) {
       final orderId = completion?.orderId?.trim();
       if (orderId == null || orderId.isEmpty) {
         _showDetailsMessage(

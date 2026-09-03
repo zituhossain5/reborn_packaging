@@ -29,7 +29,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    ref.read(pendingPostLoginIntentProvider.notifier).clear();
     _emailController.dispose();
     super.dispose();
   }
@@ -51,6 +50,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     if (succeeded) {
       if (await _handlePostLoginIntent()) return;
+      if (!mounted) return;
       context.go('/account');
       return;
     }
@@ -62,9 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<bool> _handlePostLoginIntent() async {
-    final intent = ref
-        .read(pendingPostLoginIntentProvider.notifier)
-        .consume();
+    final intent = ref.read(pendingPostLoginIntentProvider.notifier).consume();
     if (intent is! GuestOrderPostLoginIntent) return false;
 
     ref.invalidate(customerOrdersProvider);
@@ -78,7 +76,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return true;
       context.go('/account');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your order may take a moment to appear.')),
+        const SnackBar(
+          content: Text('Your order may take a moment to appear.'),
+        ),
       );
     }
     return true;
@@ -351,9 +351,11 @@ class _MarketingCheckbox extends StatelessWidget {
                   : null,
             ),
             const SizedBox(width: AppSpacing.xs),
-            const Text(
-              'Email me with news and offers',
-              style: AppTypography.loginCheckbox,
+            const Expanded(
+              child: Text(
+                'Email me with news and offers',
+                style: AppTypography.loginCheckbox,
+              ),
             ),
           ],
         ),

@@ -4,5 +4,9 @@
   "SHOPIFY_STOREFRONT_TOKEN": "replace-with-production-storefront-token",
   "SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID": "replace-with-public-mobile-client-id",
   "SHOPIFY_CUSTOMER_ACCOUNT_REDIRECT_URI": "shop.your-shop-id.app://callback",
-  "SHOPIFY_CUSTOMER_ACCOUNT_SCOPES": "openid email customer-account-api:full"
+  "SHOPIFY_CUSTOMER_ACCOUNT_SCOPES": "openid email customer-account-api:full",
+  "PRIVACY_POLICY_URL": "https://your-domain.example/privacy-policy",
+  "TERMS_URL": "https://your-domain.example/terms",
+  "SUPPORT_URL": "https://your-domain.example/support",
+  "ACCOUNT_DELETION_URL": "https://your-domain.example/account-deletion"
 }

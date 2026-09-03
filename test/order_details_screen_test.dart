@@ -51,6 +51,10 @@ void main() {
     expect(find.text('Shipping'), findsOneWidget);
     expect(find.text('Tax'), findsOneWidget);
     expect(find.text('Total'), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
     expect(find.textContaining('London SW1A 1AA'), findsOneWidget);
     expect(find.textContaining('Estimated delivery:'), findsOneWidget);
     expect(find.text('Royal Mail - TRACK1189'), findsOneWidget);

@@ -2,9 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final cartIdStoreProvider = Provider<CartIdStore>(
-  (ref) => SecureCartIdStore(),
-);
+final cartIdStoreProvider = Provider<CartIdStore>((ref) => SecureCartIdStore());
 
 abstract interface class CartIdStore {
   Future<String?> read();
@@ -13,8 +11,7 @@ abstract interface class CartIdStore {
 }
 
 class SecureCartIdStore implements CartIdStore {
-  SecureCartIdStore({FlutterSecureStorage storage = const FlutterSecureStorage()})
-    : _storage = storage;
+  SecureCartIdStore([this._storage = const FlutterSecureStorage()]);
 
   static const _cartIdKey = 'shopify_storefront_cart_id';
   final FlutterSecureStorage _storage;

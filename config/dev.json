@@ -1,8 +1,0 @@
-{
-  "SHOPIFY_STORE_DOMAIN": "rebornpackaging.myshopify.com",
-  "SHOPIFY_API_VERSION": "2026-04",
-  "SHOPIFY_STOREFRONT_TOKEN": "b38c52a8c3f4fec0382f42b22dc13d7a",
-  "SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID": "67e895df-75a5-4093-8fbc-77ae66a3de35",
-  "SHOPIFY_CUSTOMER_ACCOUNT_REDIRECT_URI": "shop.74639606051.app://callback",
-  "SHOPIFY_CUSTOMER_ACCOUNT_SCOPES": "openid email customer-account-api:full"
-}
