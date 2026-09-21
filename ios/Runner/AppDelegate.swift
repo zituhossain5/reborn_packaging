@@ -4,7 +4,7 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate,
-  ShopifyCheckoutSheetKitDelegate
+  CheckoutDelegate
 {
   private static let checkoutChannelName =
     "com.rebornpackaging.reborn_packaging/shopify_checkout"
