@@ -34,7 +34,7 @@ import UIKit
     )
 
     channel.setMethodCallHandler {
-      [weak self] (call: FlutterMethodCall, result: FlutterResult) -> Void in
+      [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
 
       guard let self = self else {
         result(
@@ -220,16 +220,16 @@ import UIKit
 
   private func safeErrorCode(for error: CheckoutError) -> String {
     switch error {
-    case .sdkError:
+    case .sdkError(_, _):
       return "sdk_error"
 
-    case .configurationError:
+    case .configurationError(_, _, _):
       return "configuration_error"
 
-    case .checkoutUnavailable:
+    case .checkoutUnavailable(_, _, _):
       return "checkout_unavailable"
 
-    case .checkoutExpired:
+    case .checkoutExpired(_, _, _):
       return "cart_expired"
 
     @unknown default:
