@@ -24,20 +24,18 @@ import UIKit
   }
 
   func didInitializeImplicitFlutterEngine(
-    _ engineBridge: FlutterImplicitEngineBridge
+  _ engineBridge: FlutterImplicitEngineBridge
   ) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
 
-    let registrar = engineBridge.pluginRegistry.registrar(
-      forPlugin: "RebornShopifyCheckoutBridge"
-    )
-
     let channel = FlutterMethodChannel(
       name: Self.checkoutChannelName,
-      binaryMessenger: registrar.messenger()
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
 
-    channel.setMethodCallHandler { [weak self] call, result in
+    channel.setMethodCallHandler {
+      [weak self] (call: FlutterMethodCall, result: FlutterResult) -> Void in
+
       guard let self = self else {
         result(
           FlutterError(
