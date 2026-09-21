@@ -212,6 +212,14 @@ import UIKit
     )
   }
 
+  func checkoutDidEmitWebPixelEvent(event: PixelEvent) {
+  // Intentionally unused.
+  }
+
+  func shouldRecoverFromError(error: CheckoutError) -> Bool {
+    return error.isRecoverable
+  }
+
   private func safeErrorCode(for error: CheckoutError) -> String {
     switch error {
     case .sdkError:
