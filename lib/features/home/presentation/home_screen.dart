@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../data/home_collection_order.dart';
 import '../models/collection_item.dart';
 import '../models/collection_page.dart';
 import '../state/home_collections_provider.dart';
@@ -109,6 +110,8 @@ class _HomeCollectionContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final orderedItems = orderHomeCollections(catalog.items);
+
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -131,7 +134,7 @@ class _HomeCollectionContent extends StatelessWidget {
               ),
             )
           else
-            CollectionGrid(items: catalog.items, onItemTap: onItemTap),
+            CollectionGrid(items: orderedItems, onItemTap: onItemTap),
         ],
       ),
     );

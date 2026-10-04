@@ -2,13 +2,14 @@ import '../../../core/errors/shopify_failure.dart';
 import '../../../core/network/shopify_storefront_client.dart';
 import '../models/collection_item.dart';
 import '../models/collection_page.dart';
+import 'home_collection_order.dart';
 
 class ShopifyCollectionRepository {
   const ShopifyCollectionRepository(this._client);
 
   static const collectionsQuery = r'''
     query HomeCollections($first: Int!, $after: String) {
-      collections(first: $first, after: $after, sortKey: TITLE) {
+      collections(first: $first, after: $after) {
         nodes {
           id
           handle
@@ -82,7 +83,7 @@ class ShopifyCollectionRepository {
     } while (pageInfo.hasNextPage);
 
     return CollectionCatalog(
-      items: List.unmodifiable(items),
+      items: orderHomeCollections(items),
       pageInfo: pageInfo,
       pagesFetched: pagesFetched,
     );
