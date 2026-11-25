@@ -88,7 +88,21 @@ android {
 }
 
 gradle.taskGraph.whenReady {
-    if (allTasks.any { it.name.contains("Release") } && !hasReleaseSigningConfig) {
+    if (allTasks.none { it.name == "compileFlutterBuildRelease" }) return@whenReady
+
+    val missingStorefrontDefines = listOf(
+        "SHOPIFY_STORE_DOMAIN",
+        "SHOPIFY_API_VERSION",
+        "SHOPIFY_STOREFRONT_TOKEN",
+    ).filter { decodedDartDefines[it].isNullOrBlank() }
+    if (missingStorefrontDefines.isNotEmpty()) {
+        throw GradleException(
+            "Release build is missing ${missingStorefrontDefines.joinToString()}. " +
+                "Build with --dart-define-from-file=config/prod.json."
+        )
+    }
+
+    if (!hasReleaseSigningConfig) {
         throw GradleException(
             "Release signing requires android/key.properties with storePassword, " +
                 "keyPassword, keyAlias, and storeFile."

@@ -57,36 +57,42 @@ class CartState {
 }
 
 class CartController extends Notifier<CartState> {
-  late final CartRepository _repository;
-  late final CartIdStore _idStore;
+  // Keep repository setup out of the first widget build so configuration
+  // errors are handled by the cart operation that needs Shopify.
+  CartRepository get _repository => ref.read(cartRepositoryProvider);
+  CartIdStore get _idStore => ref.read(cartIdStoreProvider);
 
   @override
   CartState build() {
-    _repository = ref.watch(cartRepositoryProvider);
-    _idStore = ref.watch(cartIdStoreProvider);
     Future.microtask(restore);
     return const CartState(isRestoring: true);
   }
 
   Future<void> restore() async {
+    if (!ref.mounted) return;
     state = state.copyWith(isRestoring: true, errorMessage: null);
     try {
-      final savedId = await _idStore.read();
+      final idStore = _idStore;
+      final savedId = await idStore.read();
+      if (!ref.mounted) return;
       if (savedId == null || savedId.isEmpty) {
         state = const CartState();
         return;
       }
       final cart = await _repository.fetchCart(savedId);
+      if (!ref.mounted) return;
       if (cart == null) {
-        await _idStore.clear();
-        state = const CartState();
+        await idStore.clear();
+        if (ref.mounted) state = const CartState();
         return;
       }
       state = CartState(cart: cart);
     } on ShopifyFailure catch (failure) {
-      state = CartState(errorMessage: failure.message);
+      if (ref.mounted) state = CartState(errorMessage: failure.message);
     } catch (_) {
-      state = const CartState(errorMessage: 'Unable to restore your cart.');
+      if (ref.mounted) {
+        state = const CartState(errorMessage: 'Unable to restore your cart.');
+      }
     }
   }
 

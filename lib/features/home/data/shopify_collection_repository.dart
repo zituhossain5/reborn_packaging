@@ -64,6 +64,7 @@ class ShopifyCollectionRepository {
 
   Future<CollectionCatalog> fetchAll() async {
     final items = <CollectionItem>[];
+    final seenCursors = <String>{};
     String? cursor;
     var pagesFetched = 0;
     CollectionPageInfo pageInfo;
@@ -74,10 +75,15 @@ class ShopifyCollectionRepository {
       pageInfo = page.pageInfo;
       pagesFetched++;
 
-      if (pageInfo.hasNextPage && pageInfo.endCursor == null) {
-        throw const ShopifyResponseFailure(
-          'Shopify pagination cursor was missing.',
-        );
+      if (pageInfo.hasNextPage) {
+        final nextCursor = pageInfo.endCursor;
+        if (nextCursor == null ||
+            nextCursor.isEmpty ||
+            !seenCursors.add(nextCursor)) {
+          throw const ShopifyResponseFailure(
+            'Shopify did not return a new pagination cursor.',
+          );
+        }
       }
       cursor = pageInfo.endCursor;
     } while (pageInfo.hasNextPage);
