@@ -6,10 +6,12 @@ class CustomerAccountConfig {
     required this.scopes,
   });
 
+  static const defaultScopes = 'openid email customer-account-api:full';
+
   factory CustomerAccountConfig.fromEnvironment() {
     const rawScopes = String.fromEnvironment(
       'SHOPIFY_CUSTOMER_ACCOUNT_SCOPES',
-      defaultValue: 'openid email customer-account-api:full',
+      defaultValue: defaultScopes,
     );
     return CustomerAccountConfig(
       storeDomain: const String.fromEnvironment('SHOPIFY_STORE_DOMAIN'),

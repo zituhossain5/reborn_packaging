@@ -254,6 +254,7 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+			showEnvVarsInLog = 0;
 		};
 		9740EEB61CF901F6004384FC /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -268,7 +269,8 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+			shellScript = "case \"$CONFIGURATION:${FLUTTER_BUILD_MODE:-}\" in\n  *[Rr][Ee][Ll][Ee][Aa][Ss][Ee]*)\n    url_types=$(/usr/bin/plutil -extract CFBundleURLTypes json -o - \"$SRCROOT/$INFOPLIST_FILE\" 2>/dev/null) || {\n      echo 'error: Could not read the OAuth callback URL types from Runner Info.plist.' >&2\n      exit 1\n    }\n    \"$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart\" --packages=\"$SRCROOT/../.dart_tool/package_config.json\" \"$SRCROOT/Flutter/validate_release_config.dart\" \"$url_types\" || exit $?\n    ;;\nesac\nexec /bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
 
